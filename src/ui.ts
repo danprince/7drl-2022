@@ -1,3 +1,4 @@
+import { Point } from "silmarils";
 import { Font, Inputs, Renderer, Terminal } from "./terminal";
 
 export const Colors = {
@@ -86,9 +87,28 @@ export class UI {
     }
   };
 
+  private _pointer: Point.Point = { x: -1, y: - 1};
+
+  private shouldUpdate(event: Event) {
+    if (event instanceof PointerEvent && event.type === "pointermove") {
+      let pos = this.renderer.screenToGrid({ x: event.clientX, y: event.clientY });
+
+      if (pos.x === this._pointer.x && pos.y === this._pointer.y) {
+        return false; // Pointer didn't move, don't update
+      } else {
+        this._pointer = pos;
+      }
+    }
+
+    return true;
+  }
+
   dispatch = (event: Event) => {
     this.inputs.dispatch(event);
-    this.update();
+
+    if (this.shouldUpdate(event)) {
+      this.update();
+    }
   }
 
   update() {
