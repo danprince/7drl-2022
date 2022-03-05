@@ -1,8 +1,36 @@
+import { Game } from "./game";
 import { Terminal, VirtualTerminal } from "./terminal";
 import { View, Colors } from "./ui";
 
 export class GameView extends View {
+  viewport = new VirtualTerminal(0, 0, 0, 0);
+
+  constructor(private game: Game) {
+    super();
+  }
+
   render(terminal: Terminal) {
+    this.viewport.bounds.width = this.game.level.width;
+    this.viewport.bounds.height = this.game.level.height;
+    this.viewport.attach(terminal);
+    this.drawViewport();
+  }
+
+  drawViewport() {
+    let { game, viewport } = this;
+
+    for (let y = 0; y < game.level.height; y++) {
+      for (let x = 0; x < game.level.width; x++) {
+        let tile = game.level.getTile(x, y);
+        if (tile) {
+          viewport.putGlyph(x, y, tile.glyph);
+        }
+      }
+    }
+
+    for (let entity of game.level.entities) {
+      viewport.put(entity.pos.x, entity.pos.y, entity.glyph.char, entity.glyph.fg, Colors.Black);
+    }
   }
 
   onKeyDown(event: KeyboardEvent) {

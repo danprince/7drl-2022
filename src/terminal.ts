@@ -295,21 +295,14 @@ function colorToRGB(color: string): [number, number, number] {
   return [r, g, b];
 }
 
-export function loadFont(url: string, fontCols = 16, fontRows = 16) {
-  return new Promise<Font>((resolve, reject) => {
-    let image = new Image();
-    image.src = url;
-
-    image.onload = () => resolve({
-      image,
-      fontCols,
-      fontRows,
-      charWidth: image.width / fontCols,
-      charHeight: image.height / fontRows,
-    });
-
-    image.onerror = err => reject(err);
-  });
+export function createFont(image: HTMLImageElement, fontCols = 16, fontRows = 16) {
+  return {
+    image,
+    fontCols,
+    fontRows,
+    charWidth: image.width / fontCols,
+    charHeight: image.height / fontRows,
+  };
 }
 
 export interface Line {

@@ -1,5 +1,6 @@
 import { Point } from "silmarils";
 import { Font, Inputs, Renderer, Terminal } from "./terminal";
+import { Game } from "./game";
 
 export const Colors = {
   // Base palette
@@ -58,8 +59,10 @@ export class UI {
   terminal: Terminal;
   inputs: Inputs;
   renderer: Renderer;
+  game: Game;
 
-  constructor(font: Font, palette: string[]) {
+  constructor(game: Game, font: Font, palette: string[]) {
+    this.game = game;
     this.inputs = new Inputs();
     this.renderer = new Renderer(font, palette);
     this.terminal = new Terminal(this.renderer, this.inputs);
