@@ -1,14 +1,16 @@
 import { Point, Rectangle } from "silmarils";
 
 export class Terminal {
-  private renderer: Renderer;
-  private inputs: Inputs;
+  renderer: Renderer;
+  inputs: Inputs;
   bounds: Rectangle.Rectangle;
 
   constructor(renderer: Renderer, inputs: Inputs) {
     this.renderer = renderer;
     this.inputs = inputs;
-    this.bounds = Rectangle.from(0, 0, this.renderer.width, this.renderer.height);
+    this.bounds = this.renderer
+      ? Rectangle.from(0, 0, this.renderer.width, this.renderer.height)
+      : Rectangle.from(0, 0, 0, 0);
   }
 
   get width() {
@@ -41,8 +43,8 @@ export class Terminal {
     return (
       pointer.x >= this.bounds.x + x &&
       pointer.y >= this.bounds.y + y &&
-      pointer.x <= this.bounds.x + x + w &&
-      pointer.y <= this.bounds.y + y + h
+      pointer.x < this.bounds.x + x + w &&
+      pointer.y < this.bounds.y + y + h
     );
   }
 
@@ -133,6 +135,20 @@ export class Terminal {
   }
 }
 
+export class VirtualTerminal extends Terminal {
+  constructor(x: number, y: number, width: number, height: number) {
+    super(null!, null!);
+    this.bounds = { x, y, width, height };
+  }
+
+  attach(parent: Terminal) {
+    this.bounds.x += parent.bounds.x;
+    this.bounds.y += parent.bounds.y;
+    this.renderer = parent.renderer;
+    this.inputs = parent.inputs;
+  }
+}
+
 export interface Glyph {
   char: string;
   fg: number;
@@ -186,8 +202,8 @@ export class Renderer {
 
   screenToGrid(point: Point.Point): Point.Point {
     let rect = this.canvas.getBoundingClientRect();
-    let x = (point.x - rect.x) / this.font.charWidth / this.scale;
-    let y = (point.y - rect.y) / this.font.charHeight / this.scale;
+    let x = Math.floor((point.x - rect.x) / this.font.charWidth / this.scale);
+    let y = Math.floor((point.y - rect.y) / this.font.charHeight / this.scale);
     return { x, y };
   }
 

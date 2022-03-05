@@ -1,4 +1,4 @@
-import { Terminal } from "./terminal";
+import { Terminal, VirtualTerminal } from "./terminal";
 import { View, Colors } from "./ui";
 
 export class GameView extends View {
@@ -19,6 +19,26 @@ export class GameView extends View {
 export class GlyphPickerView extends View {
   activeColor = Colors.White;
   activeChar = "\x00"
+  terminal = new VirtualTerminal(5, 5, 24, 24);
+
+  render(root: Terminal) {
+    this.terminal.attach(root);
+    this.drawGlyphPalette(this.terminal.child(0, 0, 16, 16));
+    this.drawColorPalette(this.terminal.child(18, 0, 4, 8));
+    this.drawGlyphPreview(this.terminal.child(18, 10, 1, 1));
+    this.drawTilePreview(this.terminal.child(18, 13, 3, 3));
+  }
+
+  onKeyDown(event: KeyboardEvent) {
+    switch (event.key) {
+      case "Escape":
+      case "G":
+        this.ui.close(this);
+        return true;
+      default:
+        return false;
+    }
+  }
 
   drawGlyphPalette(terminal: Terminal) {
     let selectedChar = this.activeChar;
@@ -82,25 +102,6 @@ export class GlyphPickerView extends View {
       for (let j = 0; j < terminal.height; j++) {
         terminal.put(i, j, this.activeChar, this.activeColor);
       }
-    }
-  }
-
-  render(terminal: Terminal) {
-    terminal = terminal.child(5, 5, 30, 30);
-    this.drawGlyphPalette(terminal.child(0, 0, 16, 16));
-    this.drawColorPalette(terminal.child(18, 0, 4, 8));
-    this.drawGlyphPreview(terminal.child(18, 10, 1, 1));
-    this.drawTilePreview(terminal.child(18, 13, 3, 3));
-  }
-
-  onKeyDown(event: KeyboardEvent) {
-    switch (event.key) {
-      case "Escape":
-      case "G":
-        this.ui.close(this);
-        return true;
-      default:
-        return false;
     }
   }
 }
