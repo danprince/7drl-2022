@@ -192,10 +192,10 @@ rollup@^2.59.0:
   optionalDependencies:
     fsevents "~2.3.2"
 
-silmarils@^0.5.2:
-  version "0.5.2"
-  resolved "https://registry.yarnpkg.com/silmarils/-/silmarils-0.5.2.tgz#1b7f2b4d27b5f73c5cb4583afe20110c901c4bb8"
-  integrity sha512-ko+LSfy2JmlpiB8v+f9eEJT6iFn28UlG/rR75Q+F+6JjLLEz1O9ihVKE3VPiTzOr4RuNjF+da0/+SbHtpl87EQ==
+silmarils@^0.6.1:
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/silmarils/-/silmarils-0.6.1.tgz#ded851f27f34bb14869fb41f44c7f2cf37e092b8"
+  integrity sha512-hxR7sXw7PZmVtNZ4C24HbSBcT7el3MCbXbgImBl/oJanYOqO9ODMTkUAOgsnCPTOyLwg53GzJU2ZAvzmACkpdw==
 
 source-map-js@^1.0.2:
   version "1.0.2"

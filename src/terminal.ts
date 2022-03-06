@@ -1,4 +1,5 @@
 import { Point, Rectangle } from "silmarils";
+import { Colors } from "./ui";
 
 export class Terminal {
   renderer: Renderer;
@@ -68,20 +69,26 @@ export class Terminal {
     }
   }
 
-  write(x: number, y: number, text: string) {
-    let fg = 1;
+  write(
+    x: number,
+    y: number,
+    text: string,
+    defaultColor: number = Colors.White,
+    maxLineLength = this.bounds.width - x
+  ) {
+    let fg = defaultColor;
     let bg = 0;
 
     let tx = x;
     let ty = y;
 
-    let lines = textToLines(text, this.bounds.width - x);
+    let lines = textToLines(text, maxLineLength);
 
     for (let line of lines) {
       for (let part of line.parts) {
         if (part[0] === "{") {
           if (part[1] == "/") {
-            fg = 1;
+            fg = defaultColor;
             bg = 0;
           } else {
             let colors = part.slice(1, -1).split(":");
@@ -99,6 +106,58 @@ export class Terminal {
 
       ty += 1;
       tx = x;
+    }
+  }
+
+  popup({
+    x,
+    y,
+    title,
+    text,
+    titleColor = Colors.White,
+    textColor = Colors.Grey2,
+    justify = "start",
+    align = "start",
+  }: {
+    x: number,
+    y: number,
+    title: string,
+    text: string,
+    textColor?: number,
+    titleColor?: number,
+    justify?: "start" | "center" | "end",
+    align?: "start" | "center" | "end",
+  }) {
+    let maxWidth = 20;
+
+    let titleLines = textToLines(title, maxWidth);
+    let textLines = textToLines(text, maxWidth);
+
+    let height = textLines.length;
+    let width = Math.max(
+      ...titleLines.map(l => l.length),
+      ...textLines.map(l => l.length),
+    );
+
+    if (justify === "center") x -= width / 2;
+    else if (justify === "end") x -= width;
+    if (align === "center") y -= height / 2;
+    else if (align === "end") y -= height;
+
+    this.box(x, y, width + 2, height + 2, Colors.Grey2);
+    this.write(x + 1, y, title, titleColor, width);
+    this.write(x + 1, y + 1, `{5}${text}`, textColor, width);
+  }
+
+  vline(x: number, y: number, length: number, color: number = Colors.Grey2) {
+    for (let i = 0; i < length; i++) {
+      this.put(x, y + i, "\xba", color);
+    }
+  }
+
+  hline(x: number, y: number, length: number, color: number = Colors.Grey2) {
+    for (let i = 0; i < length; i++) {
+      this.put(x + i, y, "\xb5", color);
     }
   }
 
@@ -155,6 +214,10 @@ export interface Glyph {
   bg?: number;
 }
 
+export function Glyph(char: string, fg: number, bg?: number): Glyph {
+  return { char, fg, bg };
+}
+
 export interface Font {
   image: HTMLImageElement;
   charWidth: number;
@@ -171,7 +234,7 @@ export class Renderer {
   private fontTintCache: HTMLCanvasElement[] = [];
   width: number = 0;
   height: number = 0;
-  scale: number = 3;
+  scale: number = 4;
 
   constructor(font: Font, palette: string[]) {
     this.canvas = document.createElement("canvas");
@@ -314,7 +377,7 @@ export function textToLines(text: string, maxLineLength: number) {
   let lines: Line[] = [];
   let parts: string[] = [];
   let length = 0;
-  let chunks = text.split(/(\s|\{\d+\}|\{\d+:\d+\}|\{\/\})/g);
+  let chunks = text.trim().split(/(\s|\{\d+\}|\{\d+:\d+\}|\{\/\})/g);
 
   for (let chunk of chunks) {
     if (chunk === "") continue;

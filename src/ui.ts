@@ -68,7 +68,6 @@ export class UI {
     this.terminal = new Terminal(this.renderer, this.inputs);
     this.resize(32, 32);
     document.body.append(this.renderer.canvas);
-    window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keydown", this.dispatch);
     window.addEventListener("pointermove", this.dispatch);
     window.addEventListener("pointerup", this.dispatch);
@@ -81,14 +80,27 @@ export class UI {
     this.terminal.bounds.height = height;
   }
 
-  private onKeyDown = (event: KeyboardEvent) => {
+  private onKeyDown(event: KeyboardEvent): boolean {
     for (let i = this.views.length - 1; i >= 0; i--) {
       let view = this.views[i];
       if (view.onKeyDown(event) === true) {
-        break;
+        return true;
       }
     }
-  };
+
+    return false;
+  }
+
+  private onEvent(event: Event): boolean {
+    for (let i = this.views.length - 1; i >= 0; i--) {
+      let view = this.views[i];
+      if (view.onEvent(event) === true) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   private _pointer: Point.Point = { x: -1, y: - 1};
 
@@ -109,6 +121,12 @@ export class UI {
   dispatch = (event: Event) => {
     this.inputs.dispatch(event);
 
+    this.onEvent(event);
+
+    if (event.type === "keydown") {
+      this.onKeyDown(event as KeyboardEvent);
+    }
+
     if (this.shouldUpdate(event)) {
       this.update();
     }
@@ -116,6 +134,7 @@ export class UI {
 
   update() {
     this.terminal.clear();
+
     for (let view of this.views) {
       view.render(this.terminal);
     }
@@ -136,12 +155,7 @@ export class UI {
 
 export class View {
   ui: UI = undefined!;
-
-  render(terminal: Terminal) {
-
-  }
-
-  onKeyDown(event: KeyboardEvent): void | boolean {
-
-  }
+  render(terminal: Terminal) {}
+  onKeyDown(event: KeyboardEvent): void | boolean {}
+  onEvent(event: Event): void | boolean {}
 }
