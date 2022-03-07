@@ -198,18 +198,20 @@ export class Terminal {
   }
 }
 
-export class VirtualTerminal extends Terminal {
+export abstract class Panel {
+  bounds: Rectangle.Rectangle;
+
   constructor(x: number, y: number, width: number, height: number) {
-    super(null!, null!);
     this.bounds = { x, y, width, height };
   }
 
-  attach(parent: Terminal) {
-    this.bounds.x += parent.bounds.x;
-    this.bounds.y += parent.bounds.y;
-    this.renderer = parent.renderer;
-    this.inputs = parent.inputs;
+  render(root: Terminal) {
+    let { x, y, width: w, height: h } = this.bounds;
+    let terminal = root.child(x, y, w, h);
+    this.renderPanel(terminal);
   }
+
+  abstract renderPanel(terminal: Terminal): void;
 }
 
 export interface Glyph {

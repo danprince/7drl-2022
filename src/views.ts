@@ -1,17 +1,17 @@
 import { Direction, Point, Vector } from "silmarils";
-import { DamageType, Entity, Game, PlayerAction, Status, Tile } from "./game";
-import { delayAnimationFrame, directionToGridVector, getDirectionChar, glyphToString } from "./helpers";
-import { Poisoned } from "./statuses";
-import { Glyph, singleLineLength, Terminal, VirtualTerminal } from "./terminal";
+import { Game, PlayerAction } from "./game";
+import { delayAnimationFrame, directionToGridVector, getDirectionChar } from "./helpers";
+import { MessagesPanel, SidebarPanel, TopBarPanel, ViewportPanel } from "./panels";
+import { Glyph, Terminal } from "./terminal";
 import { View, Colors } from "./ui";
 
 export class GameView extends View {
-  viewport = new VirtualTerminal(0, 0, 0, 0);
-  hud = new VirtualTerminal(0, 0, 0, 0);
-  sidebar = new VirtualTerminal(0, 0, 0, 0);
-  log = new VirtualTerminal(0, 0, 0, 0);
   fps = 40;
-  paused = false;
+
+  viewport = new ViewportPanel(2, 2, 20, 20);
+  messages = new MessagesPanel(this.viewport, 2, 23, 20, 10);
+  topBar = new TopBarPanel(2, 0, 20, 1);
+  sideBar = new SidebarPanel(0, 2, 1, 20);
 
   constructor(private game: Game) {
     super();
@@ -28,10 +28,6 @@ export class GameView extends View {
       let turnIterator = this.game.update();
 
       for await (let skipFrames of turnIterator) {
-        while (this.paused) {
-          await this.delayFrames(0);
-        }
-
         if (skipFrames > 0) {
           await this.delayFrames(skipFrames);
         }
@@ -47,239 +43,10 @@ export class GameView extends View {
   }
 
   render(terminal: Terminal) {
-    this.attach(terminal);
-    this.drawViewport();
-    this.drawHud();
-    this.drawSidebar();
-    this.drawLog();
-  }
-
-  attach(terminal: Terminal) {
-    this.viewport.bounds.width = this.game.level.width;
-    this.viewport.bounds.height = this.game.level.height;
-    this.viewport.bounds.x =
-      Math.floor(terminal.width / 2 - this.viewport.bounds.width / 2);
-    this.viewport.bounds.y = 4;
-    this.viewport.attach(terminal);
-
-    this.hud.bounds.x = this.viewport.bounds.x;
-    this.hud.bounds.y = this.viewport.bounds.y - 2;
-    this.hud.bounds.width = this.game.level.width;
-    this.hud.bounds.height = 1;
-    this.hud.attach(terminal);
-
-    this.sidebar.bounds.x = this.viewport.bounds.x - 2;
-    this.sidebar.bounds.y = this.viewport.bounds.y;
-    this.sidebar.bounds.width = 2;
-    this.sidebar.bounds.height = this.viewport.bounds.height;
-    this.sidebar.attach(terminal);
-
-    this.log.bounds.x = this.viewport.bounds.x;
-    this.log.bounds.y = this.viewport.bounds.y + this.viewport.bounds.height + 1;
-    this.log.bounds.width = this.viewport.bounds.width;
-    this.log.bounds.height = 5;
-    this.log.attach(terminal);
-  }
-
-  drawLog() {
-    let terminal = this.log;
-    let ty = 0;
-    let tx = 0;
-    let after = () => {};
-
-    for (let i = game.messages.length - 1; i >=0; i--) {
-      let message = game.messages[i];
-      let current = i === game.messages.length - 1;
-      let color = current ? Colors.White : Colors.Grey4;
-
-      for (const part of message) {
-        // Keep a copy of this location for popups
-        const px = tx;
-        const py = ty;
-
-        if (part instanceof Entity) {
-          terminal.putGlyph(tx, ty, part.glyph);
-          if (terminal.isPointerOver(tx, ty)) {
-            if (part.dead) {
-              this.viewport.put(part.pos.x, part.pos.y, "\xa3", Colors.White);
-            } else {
-              this.viewport.put(part.pos.x, part.pos.y - 1, "\x0F", Colors.White);
-            }
-          }
-          tx += 1;
-        } else if (part instanceof Tile) {
-          terminal.putGlyph(tx, ty, part.glyph);
-          if (terminal.isPointerOver(tx, ty)) {
-            this.viewport.put(part.pos.x, part.pos.y - 1, "\x0F", Colors.White);
-          }
-          tx += 1;
-        } else if (part instanceof Status) {
-          terminal.putGlyph(tx, ty, part.glyph);
-
-          if (terminal.isPointerOver(tx, ty)) {
-            after = () => terminal.popup({
-              x: px,
-              y: py + 1,
-              title: `${glyphToString(part.glyph)} ${part.name}`,
-              text: part.description,
-            });
-          }
-
-          tx += 1;
-        } else if (part instanceof DamageType) {
-          terminal.putGlyph(tx, ty, part.glyph);
-          if (terminal.isPointerOver(tx, ty)) {
-            after = () => terminal.popup({
-              x: px + 2,
-              y: py,
-              title: part.name,
-              text: part.description,
-            });
-          }
-          tx += 1;
-        } else {
-          let text = part.toString();
-          terminal.write(tx, ty, text, color);
-          tx += singleLineLength(text);
-        }
-
-        tx += 1;
-      }
-
-      ty += 1;
-      tx = 0;
-      if (ty >= terminal.height) {
-        break;
-      }
-    }
-
-    after();
-  }
-
-  drawSidebar() {
-    let terminal = this.sidebar;
-
-    for (let i = 0; i < game.player.vestiges.length; i++) {
-      let vestige = game.player.vestiges[i];
-      terminal.putGlyph(0, i, vestige.glyph);
-
-      if (terminal.isPointerOver(0, i)) {
-        terminal.popup({
-          x: 2,
-          y: i,
-          title: vestige.name,
-          text: vestige.description,
-          textColor: Colors.Grey3,
-        });
-      }
-    }
-  }
-
-  drawHud() {
-    let { hp, ability } = game.player;
-
-    let color = game.player.hasStatus(Poisoned) ? Colors.Green : Colors.Red;
-    this.hud.put(0, 0, "\x03", color);
-    this.hud.print(1, 0, hp.current.toString(), Colors.White);
-
-    if (ability) {
-      let usable = ability.canUse();
-      let fg = usable ? ability.glyph.fg : Colors.Grey2;
-      let bg = usable ? ability.glyph.bg : Colors.Grey1;
-
-      let x1 = this.hud.width - 1;
-      let x0 = this.hud.width - ability.name.length - 2;
-      this.hud.put(x1, 0, ability.glyph.char, fg, bg);
-      this.hud.print(x0, 0, ability.name, fg);
-
-      if (this.hud.isPointerOver(x1, 0)) {
-        this.hud.popup({
-          x: x1,
-          y: 1,
-          align: "start",
-          justify: "end",
-          text: ability.description,
-        });
-      }
-    }
-  }
-
-  drawViewport() {
-    let { game, viewport } = this;
-
-    viewport.frame(Colors.Grey1);
-
-    for (let y = 0; y < game.level.height; y++) {
-      for (let x = 0; x < game.level.width; x++) {
-        let tile = game.level.getTile(x, y);
-        if (tile == null) continue;
-        let substance = tile.substance;
-        let { char, fg, bg } = tile.glyph;
-
-        if (substance) {
-          fg = substance.fg;
-          bg = substance.bg;
-        }
-
-        viewport.put(x, y, char, fg, bg);
-      }
-    }
-
-    let focusedEntity: Entity | undefined;
-
-    for (let entity of game.level.entities) {
-      let glyph = entity.statusGlyph || entity.glyph;
-      viewport.put(entity.pos.x, entity.pos.y, glyph.char, glyph.fg, Colors.Black);
-
-      if (viewport.isPointerOver(entity.pos.x, entity.pos.y)) {
-        focusedEntity = entity;
-      }
-    }
-
-    for (let fx of game.level.fx) {
-      fx(viewport);
-    }
-
-    if (focusedEntity) {
-      this.drawEntityPopup(focusedEntity);
-    }
-  }
-
-  drawEntityPopup(entity: Entity) {
-    let text = "";
-
-    if (entity.hp) {
-      text += `{31}\x03{1}${entity.hp.current}{/} `;
-    }
-
-    text += entity.name;
-
-    if (entity.statuses.length) {
-      text += " ";
-    }
-
-    for (let status of entity.statuses) {
-      text += glyphToString(status.glyph);
-    }
-
-    this.viewport.popup({
-      x: Math.floor(this.viewport.width / 2),
-      y: this.viewport.height,
-      text,
-      textColor: Colors.Grey4,
-      align: "end",
-      justify: "center",
-    });
-  }
-
-  getStatusDescriptions(entity: Entity) {
-    return entity.statuses.map(status => {
-      let glyph = `{${status.glyph.fg}}${status.glyph.char}{/}`;
-      let name = `{1}${status.name}{/}`;
-      let description = `{6}${status.description}`;
-      let turns = status.turns !== Infinity ? `for {5}${status.turns}{6} turns` : ``;
-      return `${glyph}${name}\n${description} ${turns}`;
-    });
+    this.viewport.render(terminal);
+    this.messages.render(terminal);
+    this.sideBar.render(terminal);
+    this.topBar.render(terminal);
   }
 
   onKeyDown(event: KeyboardEvent) {
