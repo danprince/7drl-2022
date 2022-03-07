@@ -125,14 +125,13 @@ export class GameView extends View {
 export class GlyphPickerView extends View {
   activeColor = Colors.White;
   activeChar = "\x00"
-  terminal = new VirtualTerminal(5, 5, 24, 24);
 
   render(root: Terminal) {
-    this.terminal.attach(root);
-    this.drawGlyphPalette(this.terminal.child(0, 0, 16, 16));
-    this.drawColorPalette(this.terminal.child(18, 0, 4, 8));
-    this.drawGlyphPreview(this.terminal.child(18, 10, 1, 1));
-    this.drawTilePreview(this.terminal.child(18, 13, 3, 3));
+    let terminal = root.child(5, 5, 24, 24);
+    this.drawGlyphPalette(terminal.child(0, 0, 16, 16));
+    this.drawColorPalette(terminal.child(18, 0, 4, 8));
+    this.drawGlyphPreview(terminal.child(18, 10, 1, 1));
+    this.drawTilePreview(terminal.child(18, 13, 3, 3));
   }
 
   onKeyDown(event: KeyboardEvent) {
@@ -218,15 +217,13 @@ export class DirectionTargetingView extends View {
   direction: Direction.Direction = DirectionTargetingView.previousDirection;
 
   constructor(
-    private viewport: VirtualTerminal,
+    private viewport: ViewportPanel,
     private callback: (direction: Direction.Direction) => void
   ) {
     super();
   }
 
-  render(): void {
-    let terminal = this.viewport;
-
+  render(terminal: Terminal): void {
     let cell = Point.translated(
       game.player.pos,
       Direction.toVector(this.direction),
@@ -244,12 +241,23 @@ export class DirectionTargetingView extends View {
       let empty = game.level.isEmpty(pos.x, pos.y);
       if (empty === false) blocked = true;
       let color = blocked ? Colors.Grey2 : Colors.White;
-      terminal.put(pos.x, pos.y, "\x94", color);
+      this.viewport.put(terminal, pos.x, pos.y, "\x94", color);
     }
 
     // Show arrow 
     let char = getDirectionChar(this.direction);
-    terminal.put(cell.x, cell.y, char, Colors.White);
+    this.viewport.put(terminal, cell.x, cell.y, char, Colors.White);
+
+    if (this.ui.lastEvent instanceof PointerEvent) {
+      let pointer = terminal.getRelativePointerPosition(this.viewport.bounds);
+      let vec = Vector.fromPoints(game.player.pos, pointer);
+      this.direction = Direction.fromVector(vec);
+    }
+
+    // Use mouse position if pointer is down
+    if (terminal.isPointerDown()) {
+      this.confirm();
+    }
   }
 
   confirm() {
@@ -261,20 +269,6 @@ export class DirectionTargetingView extends View {
   cancel() {
     this.ui.close(this);
     DirectionTargetingView.previousDirection = this.direction;
-  }
-
-  onEvent(event: Event): boolean | void {
-    if (event instanceof PointerEvent) {
-      let terminal = this.viewport;
-      let pointer = terminal.getRelativePointerPosition();
-      let vec = Vector.fromPoints(game.player.pos, pointer);
-
-      this.direction = Direction.fromVector(vec);
-
-      if (terminal.isPointerDown()) {
-        this.confirm();
-      }
-    }
   }
 
   onKeyDown(event: KeyboardEvent): boolean | void {

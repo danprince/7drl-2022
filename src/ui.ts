@@ -60,6 +60,7 @@ export class UI {
   inputs: Inputs;
   renderer: Renderer;
   game: Game;
+  lastEvent: Event | undefined;
 
   constructor(game: Game, font: Font, palette: string[]) {
     this.game = game;
@@ -119,6 +120,7 @@ export class UI {
   }
 
   dispatch = (event: Event) => {
+    this.lastEvent = event;
     this.inputs.dispatch(event);
 
     this.onEvent(event);
@@ -130,6 +132,8 @@ export class UI {
     if (this.shouldUpdate(event)) {
       this.update();
     }
+
+    this.lastEvent = undefined;
   }
 
   update() {

@@ -26,11 +26,11 @@ export class Terminal {
     this.inputs.dispatch(event);
   }
 
-  getRelativePointerPosition() {
+  getRelativePointerPosition(bounds = this.bounds) {
     let pointer = this.renderer.screenToGrid(this.inputs.pointer);
     return {
-      x: pointer.x - this.bounds.x,
-      y: pointer.y - this.bounds.y,
+      x: pointer.x - bounds.x,
+      y: pointer.y - bounds.y,
     };
   }
 
