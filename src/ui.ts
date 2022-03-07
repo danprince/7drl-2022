@@ -66,7 +66,7 @@ export class UI {
     this.inputs = new Inputs();
     this.renderer = new Renderer(font, palette);
     this.terminal = new Terminal(this.renderer, this.inputs);
-    this.resize(32, 32);
+    this.resize(42, 32);
     document.body.append(this.renderer.canvas);
     window.addEventListener("keydown", this.dispatch);
     window.addEventListener("pointermove", this.dispatch);

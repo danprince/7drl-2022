@@ -79,10 +79,6 @@ export class Poisoned extends Status {
         type: DamageType.Poison,
         amount: 1,
       });
-
-      if (this.entity instanceof Player) {
-        console.log("apply poison")
-      }
     }
   }
 }

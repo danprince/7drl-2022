@@ -1,4 +1,4 @@
-import { Point, Rectangle } from "silmarils";
+import { Keyboard, Point, Rectangle } from "silmarils";
 import { Colors } from "./ui";
 
 export class Terminal {
@@ -32,6 +32,10 @@ export class Terminal {
       x: pointer.x - this.bounds.x,
       y: pointer.y - this.bounds.y,
     };
+  }
+
+  isKeyDown(key: string | number) {
+    return this.inputs.keyboard.isDown(key);
   }
 
   isPointerDown() {
@@ -292,6 +296,11 @@ interface Pointer extends Point.Point {
 
 export class Inputs {
   pointer: Pointer = { x: -1, y: -1, down: false };
+  keyboard = new Keyboard.Keyboard();
+
+  constructor() {
+    this.keyboard.addEventListeners();
+  }
 
   dispatch(event: Event) {
     if (event instanceof PointerEvent) {
