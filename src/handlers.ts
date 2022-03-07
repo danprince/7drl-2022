@@ -1,14 +1,12 @@
 import { DeathEvent, EventHandler, StatusAddedEvent, TakeDamageEvent } from "./events";
 import { glyphToString } from "./helpers";
-import * as Glyphs from "./glyphs";
+import { Chars } from "./chars";
 import { Colors } from "./ui";
-
-const HP = glyphToString(Glyphs.HP);
 
 export class MessageLogHandler extends EventHandler {
   onTakeDamage(event: TakeDamageEvent): void {
     let { entity, dealer, damage } = event;
-    let _amount = `${HP}{${Colors.Red}}${damage.amount}{/}`;
+    let _amount = `${Chars.Heart}{${Colors.Red}}${damage.amount}{/}`;
 
     if (dealer) {
       game.log(dealer, damage.type, "hit", entity, "for", _amount);

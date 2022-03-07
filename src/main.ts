@@ -10,7 +10,8 @@ import * as Entities from "./entities";
 import * as Abilities from "./abilities";
 import * as Vestiges from "./vestiges";
 import * as Statuses from "./statuses";
-import { MessageLogHandler } from "./handlers";
+import * as Levels from "./levels";
+import * as Handlers from "./handlers";
 
 declare global {
   const game: Game;
@@ -29,70 +30,15 @@ async function preload() {
 }
 
 async function start() {
-  let level = game.level = new Level(game, 20, 20);
-
+  let level = game.level = Levels.createLevel();
   let player = game.player = new Player();
-  player.setAbility(new Abilities.MagmaCharge());
   player.hp.current = 3;
-  //player.addVestige(new Vestiges.Bores());
-  //player.addVestige(new Vestiges.PoisonKnuckles());
-  //player.addVestige(new Vestiges.OnyxKnuckles());
-  //player.addVestige(new Vestiges.StoneKnuckles());
-  //player.addVestige(new Vestiges.Tectonic());
-  //player.addVestige(new Vestiges.Pyroclastic());
-  //player.addVestige(new Vestiges.Cyclical());
-  //player.addVestige(new Vestiges.Vessel());
-  //player.addVestige(new Vestiges.Incendiary());
-  player.addVestige(new Vestiges.MoloksEye());
-  player.addVestige(new Vestiges.MoloksFist());
-  player.addVestige(new Vestiges.Siphon());
-  player.addVestige(new Vestiges.Alchemical());
-  player.addVestige(new Vestiges.Hyperaware());
-  player.addVestige(new Vestiges.Leech());
-  player.addStatus(new Statuses.Molten());
+  player.pos = { x: 10, y: 10 };
   level.addEntity(player);
+  level.autotile();
 
-  for (let x = 0; x < level.width; x++) {
-    for (let y = 0; y < level.height; y++) {
-      let type = RNG.weighted([
-        { weight: 5, value: Tiles.Block },
-        { weight: 1, value: Tiles.PressurePlate },
-        { weight: 30, value: Tiles.Floor },
-      ]);
-
-      let tile = new Tile(type);
-      level.setTile(x, y, tile);
-    }
-  }
-
-  let unit = new Entities.Maguana();
-  unit.pos = { x: 5, y: 5 };
-  level.addEntity(unit);
-
-  for (let i = 0; i < 10; i++) {
-    let entity = RNG.item(
-      new Entities.Mantleshell(),
-      new Entities.Slimeshell(),
-      new Entities.Stoneshell(),
-      new Entities.Boar(),
-      new Entities.FossilKnight(),
-      new Entities.Imp(),
-      new Entities.Maguana(),
-      new Entities.Snake(),
-      new Entities.Cultist(),
-      new Entities.Worm(),
-      new Entities.Krokodil(),
-    );
-
-    entity.pos = Point.from(
-      RNG.int(0, level.width),
-      RNG.int(0, level.height),
-    );
-
-    level.addEntity(entity);
-  }
-
-  game.handlers.push(new MessageLogHandler);
+  // Setup global handlers
+  game.handlers.push(new Handlers.MessageLogHandler);
 
   // Setup the UI
   let assets = await preload();

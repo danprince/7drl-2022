@@ -1,3 +1,4 @@
+import { Chars } from "./chars";
 import { DamageType, Entity, Status, Tile } from "./game";
 import { glyphToString } from "./helpers";
 import { Poisoned } from "./statuses";
@@ -109,16 +110,16 @@ export class MessagesPanel extends Panel {
           terminal.putGlyph(tx, ty, part.glyph);
           if (terminal.isPointerOver(tx, ty)) {
             if (part.dead) {
-              this.viewport.put(terminal, part.pos.x, part.pos.y, "\xa3", Colors.White);
+              this.viewport.put(terminal, part.pos.x, part.pos.y, Chars.Skull, Colors.White);
             } else {
-              this.viewport.put(terminal, part.pos.x, part.pos.y - 1, "\x0F", Colors.White);
+              this.viewport.put(terminal, part.pos.x, part.pos.y - 1, Chars.South, Colors.White);
             }
           }
           tx += 1;
         } else if (part instanceof Tile) {
           terminal.putGlyph(tx, ty, part.glyph);
           if (terminal.isPointerOver(tx, ty)) {
-            this.viewport.put(terminal, part.pos.x, part.pos.y - 1, "\x0F", Colors.White);
+            this.viewport.put(terminal, part.pos.x, part.pos.y - 1, Chars.South, Colors.White);
           }
           tx += 1;
         } else if (part instanceof Status) {
@@ -189,7 +190,7 @@ export class TopBarPanel extends Panel {
     let { hp, ability } = game.player;
 
     let color = game.player.hasStatus(Poisoned) ? Colors.Green : Colors.Red;
-    terminal.put(0, 0, "\x03", color);
+    terminal.put(0, 0, Chars.Heart, color);
     terminal.print(1, 0, hp.current.toString(), Colors.White);
 
     if (ability) {

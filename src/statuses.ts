@@ -1,3 +1,4 @@
+import { Chars } from "./chars";
 import { DealDamageEvent, TakeDamageEvent } from "./events";
 import { DamageType, Player, Status } from "./game";
 import { assert } from "./helpers";
@@ -7,7 +8,7 @@ import { Colors } from "./ui";
 export class Molten extends Status {
   name = "Molten";
   description = "Deal/take {15}2x{/} damage";
-  glyph = Glyph("\x04", Colors.Orange3);
+  glyph = Glyph(Chars.Diamond, Colors.Orange3);
   turns = Infinity;
 
   onAdded(): void {
@@ -29,7 +30,7 @@ export class Molten extends Status {
 
 export class Stunned extends Status {
   name = "Stunned";
-  glyph = Glyph("\x09", Colors.Grey3);
+  glyph = Glyph(Chars.Stun, Colors.Grey3);
   description = "Miss a turn";
 
   constructor(turns: number) {
@@ -53,7 +54,7 @@ export class Stunned extends Status {
 
 export class Poisoned extends Status {
   name = "Poisoned";
-  glyph = Glyph("\x07", Colors.Green);
+  glyph = Glyph(Chars.Droplet, Colors.Green);
   description = "Take {15}1{/} damage";
 
   constructor(turns: number) {
@@ -80,34 +81,5 @@ export class Poisoned extends Status {
         amount: 1,
       });
     }
-  }
-}
-
-export class Hardened extends Status {
-  name = "Hardened";
-  description = "Reflect damage";
-  glyph = Glyph("\x81", Colors.Grey3, Colors.Grey1);
-
-  constructor(turns: number) {
-    super();
-    this.turns = turns;
-  }
-
-  onAdded(): void {
-    this.entity.statusGlyph = this.glyph;
-  }
-
-  onRemoved(): void {
-    delete this.entity.statusGlyph;
-  }
-
-  onTakeDamage({ damage }: TakeDamageEvent): void {
-    if (damage.dealer) {
-      let dmg = { ...damage };
-      damage.dealer.attack(damage.dealer, dmg);
-    }
-
-    // Neutralise incoming damage
-    damage.amount = 0;
   }
 }

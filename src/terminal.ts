@@ -1,4 +1,5 @@
 import { Keyboard, Point, Rectangle } from "silmarils";
+import { Chars } from "./chars";
 import { Colors } from "./ui";
 
 export class Terminal {
@@ -153,19 +154,8 @@ export class Terminal {
     this.write(x, y, text, textColor, width);
   }
 
-  vline(x: number, y: number, length: number, color: number = Colors.Grey2) {
-    for (let i = 0; i < length; i++) {
-      this.put(x, y + i, "\xba", color);
-    }
-  }
-
-  hline(x: number, y: number, length: number, color: number = Colors.Grey2) {
-    for (let i = 0; i < length; i++) {
-      this.put(x + i, y, "\xb5", color);
-    }
-  }
-
   box(x: number, y: number, w: number, h: number, fg: number = 1) {
+    let chars = Chars.BoxDrawing;
     this.clear(x, y, w, h);
 
     let x0 = x;
@@ -174,19 +164,19 @@ export class Terminal {
     let y1 = y + h - 1;
 
     for (let x = x0 + 1; x < x1; x++) {
-      this.put(x, y0, "\xb5", fg);
-      this.put(x, y1, "\xb5", fg);
+      this.put(x, y0, chars[5], fg);
+      this.put(x, y1, chars[5], fg);
     }
 
     for (let y = y0 + 1; y < y1; y++) {
-      this.put(x0, y, "\xba", fg);
-      this.put(x1, y, "\xba", fg);
+      this.put(x0, y, chars[10], fg);
+      this.put(x1, y, chars[10], fg);
     }
 
-    this.put(x0, y0, "\xbc", fg);
-    this.put(x1, y0, "\xb9", fg);
-    this.put(x0, y1, "\xb6", fg);
-    this.put(x1, y1, "\xb3", fg);
+    this.put(x0, y0, chars[12], fg);
+    this.put(x1, y0, chars[9], fg);
+    this.put(x0, y1, chars[6], fg);
+    this.put(x1, y1, chars[3], fg);
   }
 
   frame(color: number = 1) {

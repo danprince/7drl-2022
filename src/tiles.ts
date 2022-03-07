@@ -1,13 +1,40 @@
 import { TileType } from "./game";
 import { Molten } from "./statuses";
-import { Glyph } from "./terminal";
 import { Colors } from "./ui";
+import { Chars } from "./chars";
 
 export let Floor = new TileType({
   walkable: true,
   glyph: {
-    char: ["."],
+    //char: ["."],
+    char: Chars.Cobbles,
     fg: [Colors.Grey1],
+  },
+});
+
+export let Wall = new TileType({
+  walkable: false,
+  //autotiling: AUTOTILING_WALL,
+  glyph: {
+    //char: AUTOTILING_WALL,
+    char: Chars.BoneWalls,
+    fg: [Colors.Grey2],
+  },
+});
+
+export let Block = new TileType({
+  walkable: false,
+  glyph: {
+    char: Chars.Blocks,
+    fg: [Colors.Grey2],
+  },
+});
+
+export let Bones = new TileType({
+  walkable: false,
+  glyph: {
+    char: [Chars.Ribs, Chars.Bone],
+    fg: [Colors.Grey3, Colors.Grey2],
   },
 });
 
@@ -25,17 +52,4 @@ export let Fissure = new TileType({
       }
     }
   },
-});
-
-export let Block = new TileType({
-  walkable: false,
-  glyph: {
-    char: ["\x80", "\x81", "\x82"],
-    fg: [Colors.Grey2],
-  },
-});
-
-export let PressurePlate = new TileType({
-  walkable: true,
-  glyph: Glyph("\x85", Colors.Grey1),
 });

@@ -9,6 +9,7 @@ import * as Substances from "./substances";
 import * as Statuses from "./statuses";
 import * as Effects from "./effects";
 import * as Events from "./events";
+import { Chars } from "./chars";
 
 const MELEE = `{1}\xA1{/}`;
 const POISON = `{15}\x07{/}`;
@@ -23,7 +24,7 @@ const GOOD = `{15}`;
 export class Bores extends Vestige {
   name = "Bores";
   description = "Dig through walls";
-  glyph = Glyph("\xa0", Colors.Grey3);
+  glyph = Glyph(Chars.Spade, Colors.Grey3);
 
   onTileBump({ tile }: Events.TileBumpEvent): void {
     if (tile.type === Tiles.Block) {
@@ -36,7 +37,7 @@ export class Bores extends Vestige {
 
 export class PoisonKnuckles extends Vestige {
   name = "Poison Knuckles";
-  glyph = Glyph("\xa1", Colors.Green);
+  glyph = Glyph(Chars.Fist, Colors.Green);
   chance = 0.1;
   turns = 3;
 
@@ -54,7 +55,7 @@ export class PoisonKnuckles extends Vestige {
 
 export class OnyxKnuckles extends Vestige {
   name = "Onyx Knuckles";
-  glyph = Glyph("\xa1", Colors.Blue2);
+  glyph = Glyph(Chars.Fist, Colors.Blue2);
   chance = 0.1;
   turns = 3;
 
@@ -72,7 +73,7 @@ export class OnyxKnuckles extends Vestige {
 export class StoneKnuckles extends Vestige {
   name = "Stone Knuckles";
   description = `${MELEE} attacks cause ${KNOCKBACK}`;
-  glyph = Glyph("\xa1", Colors.Grey3);
+  glyph = Glyph(Chars.Fist, Colors.Grey3);
   chance = 0.1;
   turns = 3;
 
@@ -83,7 +84,7 @@ export class StoneKnuckles extends Vestige {
 
 export class Tectonic extends Vestige {
   name = "Tectonic";
-  glyph = Glyph("\x0b", Colors.Blue);
+  glyph = Glyph(Chars.NorthEast, Colors.Blue);
   description = `Attacks cause ${KNOCKBACK}`;
   chance = 0.1;
   turns = 3;
@@ -95,7 +96,7 @@ export class Tectonic extends Vestige {
 
 export class Pyroclastic extends Vestige {
   name = "Pyroclastic";
-  glyph = Glyph("\x96", Colors.Orange3, Colors.Orange1);
+  glyph = Glyph(Chars.Fist, Colors.Orange3, Colors.Orange1);
   chance = 0.1;
   description = `${percentToString(this.chance)} chance for ${MELEE} to create {10}magma`;
 
@@ -114,7 +115,7 @@ export class Cyclical extends Vestige {
   readonly turnsPerCharge = 10;
 
   name = "Cyclical";
-  glyph = Glyph("\xa2", Colors.Red);
+  glyph = Glyph(Chars.Loop, Colors.Red);
   description = `Regain {30}\x03{/} each ${this.turnsPerCharge} turns`;
   timer = 0;
 
@@ -135,7 +136,7 @@ export class Cyclical extends Vestige {
 
 export class Vessel extends Vestige {
   name = "Vessel";
-  glyph = Glyph("\xa3", Colors.White);
+  glyph = Glyph(Chars.Skull, Colors.White);
   description = `Prevent death itself`;
   used = false;
 
@@ -150,7 +151,7 @@ export class Vessel extends Vestige {
 
 export class Incendiary extends Vestige {
   name = "Incendiary";
-  glyph = Glyph("\xa5", Colors.Orange, Colors.Red1);
+  glyph = Glyph(Chars.Fire, Colors.Orange, Colors.Red1);
   description = `Explode when you become molten`;
 
   onStatusAdded({ status }: Events.StatusAddedEvent): void {
@@ -173,7 +174,7 @@ export class Incendiary extends Vestige {
 export class MoloksEye extends Vestige {
   multiplier = 2;
   name = "Molok's Eye";
-  glyph = Glyph("\xa6", Colors.Red);
+  glyph = Glyph(Chars.Eye, Colors.Red);
   description = `${GOOD}${this.multiplier}x${RESET} ${MELEE} when ${HP} is ${GOOD}full`;
 
   onMeleeDamage(damage: Damage): void {
@@ -187,7 +188,7 @@ export class MoloksEye extends Vestige {
 export class MoloksFist extends Vestige {
   multiplier = 2;
   name = "Molok's Fist";
-  glyph = Glyph("\xa1", Colors.Red);
+  glyph = Glyph(Chars.Fist, Colors.Red);
   description = `${GOOD}${this.multiplier}x${RESET} ${MELEE} when ${HP} is {1}1`;
 
   onMeleeDamage(damage: Damage): void {
@@ -200,7 +201,7 @@ export class MoloksFist extends Vestige {
 
 export class Siphon extends Vestige {
   name = "Siphon";
-  glyph = Glyph("\x7e", Colors.Turquoise);
+  glyph = Glyph(Chars.Magic, Colors.Orange3);
   description = `Draw from adjacent ${FISSURE}`;
 
   onTileEnter({ tile }: Events.TileEnterEvent): void {
@@ -216,7 +217,7 @@ export class Siphon extends Vestige {
 
 export class Alchemical extends Vestige {
   name = "Alchemical";
-  glyph = Glyph("\xa3", Colors.Green);
+  glyph = Glyph(Chars.Skull, Colors.Green);
   description = `Immune to ${POISON}`;
 
   onStatusAdded({ status }: Events.StatusAddedEvent): void {
@@ -228,7 +229,7 @@ export class Alchemical extends Vestige {
 
 export class Hyperaware extends Vestige {
   name = "Hyperaware";
-  glyph = Glyph("\xa3", Colors.Blue3);
+  glyph = Glyph(Chars.Skull, Colors.Blue3);
   description = `Immune to ${STUN}`;
 
   onStatusAdded({ status }: Events.StatusAddedEvent): void {
@@ -240,7 +241,7 @@ export class Hyperaware extends Vestige {
 
 export class Leech extends Vestige {
   name = "Leech";
-  glyph = Glyph("\x13", Colors.Red3);
+  glyph = Glyph(Chars.Worm, Colors.Red3);
   description = `Gain ${HP} on ${KILL}`;
 
   onKill({ entity }: Events.KillEvent): void {

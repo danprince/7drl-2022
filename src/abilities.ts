@@ -1,4 +1,5 @@
 import { Direction, Point, Vector } from "silmarils";
+import { Chars } from "./chars";
 import { MagmaBomb } from "./entities";
 import { Ability, Damage, DamageType, Effect, Entity, TargetingMode, Tile } from "./game";
 import { assert, directionToGridVector } from "./helpers";
@@ -60,8 +61,8 @@ export abstract class Throwable extends Ability {
 export class Erupt extends Throwable {
   name = "Erupt";
   description = "Throw some magma";
-  glyph = Glyph("\x2a", Colors.Orange, Colors.Orange1);
-  projectileGlyph = Glyph("\x8e", Colors.Orange);
+  glyph = Glyph(Chars.Missile, Colors.Orange, Colors.Orange1);
+  projectileGlyph = Glyph(Chars.Block1, Colors.Orange);
   targeting = TargetingMode.Directional;
 
   canUse(): boolean {
@@ -94,7 +95,7 @@ export class Erupt extends Throwable {
 export class Dash extends Ability {
   name = "Dash";
   description = "Do a dash";
-  glyph = Glyph("\x8b", Colors.Orange, Colors.Orange1);
+  glyph = Glyph(Chars.Boots, Colors.Orange, Colors.Orange1);
   targeting = TargetingMode.Directional;
 
   canUse(): boolean {
@@ -142,7 +143,7 @@ export class Dash extends Ability {
 export class Grapple extends Ability {
   name = "Grapple";
   description = "Pull towards you";
-  glyph = Glyph("\x8a", Colors.Blue, Colors.Blue1);
+  glyph = Glyph(Chars.Grapple, Colors.Blue, Colors.Blue1);
   targeting = TargetingMode.Directional;
 
   canUse(): boolean {
@@ -219,8 +220,8 @@ export class Grapple extends Ability {
 export class Sling extends Throwable {
   name = "Sling";
   description = "Throw a stone";
-  glyph = Glyph("\x2a", Colors.Grey4, Colors.Grey2);
-  projectileGlyph = Glyph("\x96", Colors.Grey3);
+  glyph = Glyph(Chars.Missile, Colors.Grey4, Colors.Grey2);
+  projectileGlyph = Glyph("*", Colors.Grey3);
 
   canUse(): boolean {
     return true;
@@ -278,7 +279,7 @@ export class MagmaCharge extends Ability {
   name = "Charge";
   description = "";
   targeting = TargetingMode.None;
-  glyph = Glyph("\x8f", Colors.Orange, Colors.Orange2);
+  glyph = Glyph(Chars.CircleOutline, Colors.Orange, Colors.Orange2);
 
   canUse(): boolean {
     return game.player.hasStatus(Molten);
@@ -290,23 +291,6 @@ export class MagmaCharge extends Ability {
     bomb.pos = Point.clone(game.player.pos);
     game.level.addEntity(bomb);
     game.log(this.owner, "plants the charge");
-    return true;
-  }
-}
-
-export class Harden extends Ability {
-  name = "Harden";
-  description = "";
-  glyph = Glyph("\x81", Colors.Grey4, Colors.Grey1);
-  targeting = TargetingMode.None;
-
-  canUse(): boolean {
-    return game.player.hasStatus(Molten);
-  }
-
-  use() {
-    game.player.removeStatusType(Molten);
-    game.player.addStatus(new Hardened(3));
     return true;
   }
 }

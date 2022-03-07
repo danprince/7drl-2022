@@ -6,6 +6,7 @@ import { Colors } from "./ui";
 import * as Statuses from "./statuses";
 import * as Substances from "./substances";
 import * as Effects from "./effects";
+import { Chars } from "./chars";
 
 export abstract class Snail extends Entity {
   speed = Speeds.Every2Turns;
@@ -52,27 +53,27 @@ export class Mantleshell extends Snail {
   name = "Mantleshell";
   description = "";
   substanceType = Substances.Magma;
-  glyph = Glyph("\x15", Colors.Orange3);
+  glyph = Glyph(Chars.Snail, Colors.Orange3);
 }
 
 export class Slimeshell extends Snail {
   name = "Slimeshell";
   description = "";
   substanceType = Substances.Slime;
-  glyph = Glyph("\x15", Colors.Green);
+  glyph = Glyph(Chars.Snail, Colors.Green);
 }
 
 export class Stoneshell extends Snail {
   name = "Stoneshell";
   description = "";
   substanceType = undefined;
-  glyph = Glyph("\x15", Colors.Grey3);
+  glyph = Glyph(Chars.Snail, Colors.Grey3);
 }
 
 export class Boar extends Entity {
   name = "Boar";
   description = "";
-  glyph = Glyph("\x18", Colors.Grey3);
+  glyph = Glyph(Chars.Boar, Colors.Grey3);
   speed = Speeds.EveryTurn;
   hp = { current: 3, max: 3 };
 
@@ -182,7 +183,7 @@ export class Boar extends Entity {
 export class Ant extends Entity {
   name = "Ant";
   description = "";
-  glyph = Glyph("\x11", Colors.Orange2);
+  glyph = Glyph(Chars.Ant, Colors.Orange2);
   speed = Speeds.Every2Turns;
   hp = { current: 1, max: 1 };
 
@@ -196,7 +197,7 @@ export class Ant extends Entity {
 export class Lizard extends Entity {
   name = "Lizard";
   description = "";
-  glyph = Glyph("\x12", Colors.Grey3);
+  glyph = Glyph(Chars.Lizard, Colors.Grey3);
   hp = Stat(2);
   speed = Speeds.Every2Turns;
   triggeringEntity: Entity | undefined;
@@ -226,7 +227,7 @@ export class Lizard extends Entity {
     yield* Effects.Explosion({
       pos: this.pos,
       size: 3,
-      glyph: Glyph("\x90", Colors.Orange2, Colors.Orange1),
+      glyph: Glyph("^", Colors.Orange2, Colors.Orange1),
       attacker: this.triggeringEntity || this,
       getDamage: () => this.getExplosionDamage(),
     });
@@ -252,7 +253,7 @@ export class Lizard extends Entity {
 export class Maguana extends Entity {
   name = "Maguana";
   description = "";
-  glyph = Glyph("\x12", Colors.Orange3);
+  glyph = Glyph(Chars.Lizard, Colors.Orange3);
   hp = Stat(2);
   speed = Speeds.Every2Turns;
   triggeringEntity: Entity | undefined;
@@ -278,7 +279,7 @@ export class Maguana extends Entity {
     yield* Effects.Explosion({
       pos: this.pos,
       size: 3,
-      glyph: Glyph("\x90", Colors.Orange2, Colors.Orange1),
+      glyph: Glyph("^", Colors.Orange2, Colors.Orange1),
       attacker: this.triggeringEntity || this,
       getDamage: () => this.getExplosionDamage(),
     });
@@ -304,7 +305,7 @@ export class Maguana extends Entity {
 export class Frog extends Entity {
   name = "Frog";
   description = "";
-  glyph = Glyph("\x14", Colors.Green);
+  glyph = Glyph(Chars.Frog, Colors.Green);
   speed = Speeds.Every3Turns;
   hp = { current: 2, max: 2 };
 
@@ -318,7 +319,7 @@ export class Frog extends Entity {
 export class Imp extends Entity {
   name = "Imp";
   description = "";
-  glyph = Glyph("\x17", Colors.Blue);
+  glyph = Glyph(Chars.Imp, Colors.Blue);
   speed = Speeds.EveryTurn;
   hp = { current: 2, max: 2 };
   status: "searching" | "attacking" = "searching";
@@ -327,8 +328,8 @@ export class Imp extends Entity {
   takeTurn(): UpdateResult {
     switch (this.status) {
       case "searching": {
-        if (this.canSee(this.level.game.player)) {
-          this.target = this.level.game.player;
+        if (this.canSee(game.player)) {
+          this.target = game.player;
           this.status = "attacking";
           this.moveTowards(this.target);
           return true;
@@ -363,9 +364,9 @@ export class Imp extends Entity {
 
 export class FossilKnight extends Entity {
   name = "Fossil Knight";
-  description = `{31}\x8f\x8f\x8f\n\x8f{1}\x0b{31}\x8f\n\x8f\x8f\x8f`;
-  glyph = Glyph("\x19", Colors.Grey3);
-  hitMarkerGlyph = Glyph("\x94", Colors.Red);
+  description = ``;
+  glyph = Glyph(Chars.Knight, Colors.Grey3);
+  hitMarkerGlyph = Glyph("*", Colors.Red);
   speed = Speeds.Every4Turns;
   hp = { current: 10, max: 10 };
   heavy = true;
@@ -376,8 +377,8 @@ export class FossilKnight extends Entity {
   takeTurn(): UpdateResult {
     switch (this.status) {
       case "idle": {
-        if (this.canSee(this.level.game.player)) {
-          this.target = this.level.game.player;
+        if (this.canSee(game.player)) {
+          this.target = game.player;
           this.status = "chasing";
           this.moveTowards(this.target);
         }
@@ -440,7 +441,7 @@ export class FossilKnight extends Entity {
 export class Snake extends Entity {
   name = "Snake";
   description = "";
-  glyph = Glyph("\x16", Colors.Green);
+  glyph = Glyph(Chars.Snake, Colors.Green);
   speed = Speeds.Every2Turns;
   hp = { current: 2, max: 2 };
   status: "idle" | "chasing" = "idle";
@@ -449,8 +450,8 @@ export class Snake extends Entity {
   takeTurn(): UpdateResult {
     switch (this.status) {
       case "idle": {
-        if (this.canSee(this.level.game.player)) {
-          this.target = this.level.game.player;
+        if (this.canSee(game.player)) {
+          this.target = game.player;
           this.status = "chasing";
         }
 
@@ -481,7 +482,7 @@ export class Snake extends Entity {
 export class Worm extends Entity {
   name = "Worm";
   description = "";
-  glyph = Glyph("\x13", Colors.Turquoise);
+  glyph = Glyph(Chars.Worm, Colors.Turquoise);
   speed = Speeds.Every2Turns;
   hp = { current: 2, max: 2 };
   status: "idle" | "chasing" = "idle";
@@ -492,8 +493,8 @@ export class Worm extends Entity {
 
     switch (this.status) {
       case "idle": {
-        if (this.canSee(this.level.game.player)) {
-          this.target = this.level.game.player;
+        if (this.canSee(game.player)) {
+          this.target = game.player;
           this.status = "chasing";
         } else {
           this.moveIn(RNG.element(Direction.DIRECTIONS));
@@ -527,7 +528,7 @@ export class Worm extends Entity {
     let projectile = Point.clone(this.pos);
 
     let done = this.level.addFX(terminal => {
-      terminal.put(projectile.x, projectile.y, "\x94", Colors.Green);
+      terminal.put(projectile.x, projectile.y, "*", Colors.Green);
     });
 
     for (let { x, y } of path) {
@@ -565,7 +566,7 @@ export class Worm extends Entity {
 export class Cultist extends Entity {
   name = "Cultist";
   description = "";
-  glyph = Glyph("\x1b", Colors.Red);
+  glyph = Glyph(Chars.Cultist, Colors.Red);
   hp = Stat(2);
   speed = Speeds.Every2Turns;
 
@@ -644,10 +645,10 @@ export class Cultist extends Entity {
 export class CultistPortal extends Entity {
   name = "Cultist";
   description = "";
-  glyph = Glyph("\xad", Colors.Red);
+  glyph = Glyph(Chars.Portal1, Colors.Red);
   speed = Speeds.Never;
   age = 0;
-  chars = ["\xad", "\xae", "\xaf"];
+  chars = Chars.Portals;
 
   updateSummoning() {
     this.age += 1;
@@ -670,12 +671,12 @@ export class CultistPortal extends Entity {
 export class Demon extends Entity {
   name = "Demon";
   description = "";
-  glyph = Glyph("\x1c", Colors.Red);
+  glyph = Glyph(Chars.Demon, Colors.Red);
   hp = Stat(10);
   speed = Speeds.EveryTurn;
 
   takeTurn() {
-    return this.moveTowards(this.level.game.player);
+    return this.moveTowards(game.player);
   }
 
   getMeleeDamage(): Damage {
@@ -689,12 +690,12 @@ export class Demon extends Entity {
 export class Krokodil extends Entity {
   name = "Krokodil";
   description = "";
-  glyph = Glyph("\x1a", Colors.Green);
+  glyph = Glyph(Chars.Krokodil, Colors.Green);
   hp = Stat(3);
   speed = Speeds.Every2Turns;
 
   takeTurn() {
-    return this.moveTowards(this.level.game.player);
+    return this.moveTowards(game.player);
   }
 
   getMeleeDamage(): Damage {
@@ -708,7 +709,7 @@ export class Krokodil extends Entity {
 export class PunchingBag extends Entity {
   name = "Punching Bag";
   description = "Has no chance!";
-  glyph = Glyph("\xac", Colors.Orange4);
+  glyph = Glyph("\x91", Colors.Orange4);
   hp = Stat(99);
   speed = Speeds.Never;
 }
@@ -716,12 +717,12 @@ export class PunchingBag extends Entity {
 export class Golem extends Entity {
   name = "Golem";
   description = "";
-  glyph = Glyph("\x1d", Colors.Grey3);
+  glyph = Glyph(Chars.Golem, Colors.Grey3);
   speed = Speeds.Every3Turns;
 
   takeTurn() {
     if (this.canSee(game.player)) {
-      return this.moveTowards(this.level.game.player);
+      return this.moveTowards(game.player);
     } else {
       return this.moveIn(RNG.element(Direction.CARDINAL_DIRECTIONS));
     }
@@ -739,7 +740,7 @@ export class Golem extends Entity {
 export class MagmaBomb extends Entity {
   name = "Bomb";
   description = "";
-  glyph = Glyph("\x8f", Colors.Orange, Colors.Orange2);
+  glyph = Glyph(Chars.CircleOutline, Colors.Orange, Colors.Orange2);
   timer: number = 5;
   blastRadius: number = 3;
   owner: Entity | undefined;
@@ -752,7 +753,7 @@ export class MagmaBomb extends Entity {
       game.level.addEffect(Effects.Explosion({
         pos: this.pos,
         size: 3,
-        glyph: Glyph("\x90", Colors.Orange2, Colors.Orange1),
+        glyph: Glyph(Chars.CircleOutline, Colors.Orange2, Colors.Orange1),
         attacker: this.owner,
         getDamage: () => ({
           type: DamageType.Explosion,

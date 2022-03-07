@@ -8,10 +8,10 @@ import { View, Colors } from "./ui";
 export class GameView extends View {
   fps = 40;
 
-  viewport = new ViewportPanel(2, 2, 20, 20);
-  messages = new MessagesPanel(this.viewport, 2, 23, 20, 10);
-  topBar = new TopBarPanel(2, 0, 20, 1);
-  sideBar = new SidebarPanel(0, 2, 1, 20);
+  viewport = new ViewportPanel(2, 2, 21, 21);
+  messages = new MessagesPanel(this.viewport, 2, 23, 21, 10);
+  topBar = new TopBarPanel(2, 0, 21, 1);
+  sideBar = new SidebarPanel(0, 2, 1, 21);
 
   constructor(private game: Game) {
     super();

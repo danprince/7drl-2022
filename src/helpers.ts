@@ -1,4 +1,5 @@
 import { Direction } from "silmarils";
+import { Chars } from "./chars";
 import { Glyph } from "./terminal";
 
 export function loadImage(url: string): Promise<HTMLImageElement> {
@@ -41,14 +42,14 @@ export function delayAnimationFrame(delay: number = 0) {
 export const DIRECTION_CHARS: {
   [K in Direction.Direction]: string
 } = {
-  [Direction.NORTH]: "\x0e",
-  [Direction.SOUTH]: "\x0f",
-  [Direction.WEST]: "\x0d",
-  [Direction.EAST]: "\x0c",
-  [Direction.NORTH_EAST]: "\x8b",
-  [Direction.SOUTH_EAST]: "\x8d",
-  [Direction.NORTH_WEST]: "\x8a",
-  [Direction.SOUTH_WEST]: "\x8c",
+  [Direction.NORTH]: Chars.North,
+  [Direction.SOUTH]: Chars.South,
+  [Direction.WEST]: Chars.West,
+  [Direction.EAST]: Chars.East,
+  [Direction.NORTH_EAST]: Chars.NorthEast,
+  [Direction.SOUTH_EAST]: Chars.SouthEast,
+  [Direction.NORTH_WEST]: Chars.NorthWest,
+  [Direction.SOUTH_WEST]: Chars.SouthWest,
 };
 
 export function getDirectionChar(direction: Direction.Direction): string {

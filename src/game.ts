@@ -1,4 +1,5 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
+import { Chars } from "./chars";
 import { DealDamageEvent, DeathEvent, dispatch, EventHandler, GameEvent, KillEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
 import { Glyph, Terminal } from "./terminal";
 import { Colors, UI } from "./ui";
@@ -57,7 +58,6 @@ export type Effect = Generator<number, void>;
 export type FX = (terminal: Terminal) => void;
 
 export class Level {
-  game: Game;
   width: number;
   height: number;
   entities: Entity[] = [];
@@ -65,8 +65,7 @@ export class Level {
   fx: FX[] = [];
   effects: Effect[] = [];
 
-  constructor(game: Game, width: number, height: number) {
-    this.game = game;
+  constructor(width: number, height: number) {
     this.width = width;
     this.height = height;
   }
@@ -139,6 +138,29 @@ export class Level {
     if (!tile.type.walkable) return false;
     let entities = this.getEntitiesAt(x, y);
     return entities.length === 0;
+  }
+
+  autotile(x0 = 0, y0 = 0, x1 = this.width - 1, y1 = this.height - 1) {
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        let tile = this.getTile(x, y);
+        if (tile == null) continue;
+        if (tile.type.autotiling == null) continue;
+
+        let a = this.getTile(x - 1, y);
+        let b = this.getTile(x, y - 1);
+        let c = this.getTile(x + 1, y);
+        let d = this.getTile(x, y + 1);
+
+        let offset =
+          (a && a.type.autotiling === tile.type.autotiling ? 1 : 0) |
+          (b && b.type.autotiling === tile.type.autotiling ? 2 : 0) |
+          (c && c.type.autotiling === tile.type.autotiling ? 4 : 0) |
+          (d && d.type.autotiling === tile.type.autotiling ? 8 : 0);
+
+        tile.glyph.char = tile.type.autotiling[offset];
+      }
+    }
   }
 }
 
@@ -231,13 +253,13 @@ export const Speeds = {
 };
 
 export const StatusGlyphs = {
-  Stunned: Glyph("\x90", Colors.Grey3),
+  Stunned: Glyph(Chars.Stun, Colors.Grey3),
   Alerted: Glyph("!", Colors.Red),
-  Attacking: Glyph("\x0b", Colors.Red),
-  North: Glyph("\x0e", Colors.Red),
-  South: Glyph("\x0f", Colors.Red),
-  West: Glyph("\x0d", Colors.Red),
-  East: Glyph("\x0c", Colors.Red),
+  Attacking: Glyph(Chars.Sword, Colors.Red),
+  North: Glyph(Chars.North, Colors.Red),
+  South: Glyph(Chars.South, Colors.Red),
+  West: Glyph(Chars.West, Colors.Red),
+  East: Glyph(Chars.East, Colors.Red),
 };
 
 export class DamageType {
@@ -252,31 +274,31 @@ export class DamageType {
   }
 
   static Melee = new DamageType(
-    Glyph("\xa1", Colors.Grey3),
+    Glyph(Chars.Fist, Colors.Grey3),
     "Melee",
     ""
   );
 
   static Poison = new DamageType(
-    Glyph("\x07", Colors.Green),
+    Glyph(Chars.Droplet, Colors.Green),
     "Poison",
     ""
   );
 
   static Explosion = new DamageType(
-    Glyph("\xa5", Colors.Orange4),
+    Glyph(Chars.Fire, Colors.Orange4),
     "Explosion",
     ""
   );
 
   static Stone = new DamageType(
-    Glyph("\x81", Colors.Grey3),
+    Glyph(Chars.Block1, Colors.Grey3),
     "Stone",
     ""
   );
 
   static Misc = new DamageType(
-    Glyph("\x0b", Colors.Grey3),
+    Glyph(Chars.Sword, Colors.Grey3),
     "Damage",
     ""
   );
@@ -622,7 +644,7 @@ export type PlayerAction =
 export class Player extends Entity {
   name = "You";
   description = "";
-  glyph = Glyph("\x10", Colors.White);
+  glyph = Glyph(Chars.Creature, Colors.White);
   speed = Speeds.EveryTurn;
   hp = { current: 3, max: 3 };
   molten = false;
