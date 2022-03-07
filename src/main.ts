@@ -9,6 +9,8 @@ import * as Tiles from "./tiles";
 import * as Entities from "./entities";
 import * as Abilities from "./abilities";
 import * as Vestiges from "./vestiges";
+import * as Statuses from "./statuses";
+import { MessageLogHandler } from "./handlers";
 
 declare global {
   const game: Game;
@@ -30,24 +32,31 @@ async function start() {
   let level = game.level = new Level(game, 20, 20);
 
   let player = game.player = new Player();
-  player.ability = new Abilities.Dart();
-  player.hp.current = 1;
-  player.addVestige(new Vestiges.Bores());
-  player.addVestige(new Vestiges.PoisonKnuckles());
-  player.addVestige(new Vestiges.OnyxKnuckles());
-  player.addVestige(new Vestiges.StoneKnuckles());
-  player.addVestige(new Vestiges.Tectonic());
-  player.addVestige(new Vestiges.Pyroclastic());
-  player.addVestige(new Vestiges.Cyclical());
-  player.addVestige(new Vestiges.Vessel());
-  player.addVestige(new Vestiges.Incendiary());
+  player.setAbility(new Abilities.MagmaCharge());
+  player.hp.current = 3;
+  //player.addVestige(new Vestiges.Bores());
+  //player.addVestige(new Vestiges.PoisonKnuckles());
+  //player.addVestige(new Vestiges.OnyxKnuckles());
+  //player.addVestige(new Vestiges.StoneKnuckles());
+  //player.addVestige(new Vestiges.Tectonic());
+  //player.addVestige(new Vestiges.Pyroclastic());
+  //player.addVestige(new Vestiges.Cyclical());
+  //player.addVestige(new Vestiges.Vessel());
+  //player.addVestige(new Vestiges.Incendiary());
+  player.addVestige(new Vestiges.MoloksEye());
+  player.addVestige(new Vestiges.MoloksFist());
+  player.addVestige(new Vestiges.Siphon());
+  player.addVestige(new Vestiges.Alchemical());
+  player.addVestige(new Vestiges.Hyperaware());
+  player.addVestige(new Vestiges.Leech());
+  player.addStatus(new Statuses.Molten());
   level.addEntity(player);
 
   for (let x = 0; x < level.width; x++) {
     for (let y = 0; y < level.height; y++) {
       let type = RNG.weighted([
         { weight: 5, value: Tiles.Block },
-        { weight: 1, value: Tiles.Fissure },
+        { weight: 1, value: Tiles.PressurePlate },
         { weight: 30, value: Tiles.Floor },
       ]);
 
@@ -56,7 +65,7 @@ async function start() {
     }
   }
 
-  let unit = new Entities.PunchingBag();
+  let unit = new Entities.Maguana();
   unit.pos = { x: 5, y: 5 };
   level.addEntity(unit);
 
@@ -82,6 +91,8 @@ async function start() {
 
     level.addEntity(entity);
   }
+
+  game.handlers.push(new MessageLogHandler);
 
   // Setup the UI
   let assets = await preload();

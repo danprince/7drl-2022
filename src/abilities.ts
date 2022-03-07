@@ -1,6 +1,6 @@
 import { Direction, Point, Vector } from "silmarils";
 import { MagmaBomb } from "./entities";
-import { Ability, Damage, Effect, Entity, TargetingMode, Tile } from "./game";
+import { Ability, Damage, DamageType, Effect, Entity, TargetingMode, Tile } from "./game";
 import { assert, directionToGridVector } from "./helpers";
 import { Hardened, Molten, Poisoned, Stunned } from "./statuses";
 import { Glyph } from "./terminal";
@@ -81,6 +81,7 @@ export class Erupt extends Throwable {
   onHitEntities(entities: Entity[], vec: Vector.Vector): boolean {
     for (let entity of entities) {
       game.player.attack(entity, {
+        type: DamageType.Explosion,
         amount: 2,
         direction: vec,
       });
@@ -131,6 +132,7 @@ export class Dash extends Ability {
 
   getCollisionDamage(vec: Vector.Vector): Damage {
     return {
+      type: DamageType.Melee,
       amount: 1,
       direction: Vector.clone(vec),
     };
@@ -238,6 +240,7 @@ export class Sling extends Throwable {
 
   getStoneDamage(): Damage {
     return {
+      type: DamageType.Stone,
       amount: 1
     };
   }
@@ -261,18 +264,13 @@ export class Dart extends Throwable {
   onHitEntities(entities: Entity[], vec: Vector.Vector): boolean {
     for (let entity of entities) {
       game.player.attack(entity, {
+        type: DamageType.Misc,
         amount: 1,
         direction: vec,
         statuses: [new Poisoned(this.turnsOfPoison)],
       });
     }
     return true;
-  }
-
-  getDamage(): Damage {
-    return {
-      amount: 1,
-    };
   }
 }
 
@@ -291,6 +289,7 @@ export class MagmaCharge extends Ability {
     let bomb = new MagmaBomb();
     bomb.pos = Point.clone(game.player.pos);
     game.level.addEntity(bomb);
+    game.log(this.owner, "plants the charge");
     return true;
   }
 }

@@ -92,13 +92,13 @@ export class Terminal {
             bg = 0;
           } else {
             let colors = part.slice(1, -1).split(":");
-            fg = parseInt(colors[0]) || 1;
+            fg = parseInt(colors[0]) || defaultColor;
             bg = parseInt(colors[1]) || 0;
           }
         } else {
           for (let i = 0; i < part.length; i++) {
             let char = part[i];
-            this.put(tx, ty, char, fg, bg);
+            if (char !== " ") this.put(tx, ty, char, fg, bg);
             tx += 1;
           }
         }
@@ -112,16 +112,16 @@ export class Terminal {
   popup({
     x,
     y,
-    title,
+    title = "",
     text,
     titleColor = Colors.White,
-    textColor = Colors.Grey2,
+    textColor = Colors.Grey3,
     justify = "start",
     align = "start",
   }: {
     x: number,
     y: number,
-    title: string,
+    title?: string,
     text: string,
     textColor?: number,
     titleColor?: number,
@@ -144,9 +144,9 @@ export class Terminal {
     if (align === "center") y -= height / 2;
     else if (align === "end") y -= height;
 
-    this.box(x, y, width + 2, height + 2, Colors.Grey2);
-    this.write(x + 1, y, title, titleColor, width);
-    this.write(x + 1, y + 1, `{5}${text}`, textColor, width);
+    this.box(x - 1, y - 1, width + 2, height + 2, Colors.Grey2);
+    this.write(x, y - 1, title, titleColor, width);
+    this.write(x, y, text, textColor, width);
   }
 
   vline(x: number, y: number, length: number, color: number = Colors.Grey2) {
@@ -371,6 +371,10 @@ export function createFont(image: HTMLImageElement, fontCols = 16, fontRows = 16
 export interface Line {
   parts: string[];
   length: number;
+}
+
+export function singleLineLength(text: string) {
+  return text.trim().replace(/(\s|\{\d+\}|\{\d+:\d+\}|\{\/\})/g, "").length;
 }
 
 export function textToLines(text: string, maxLineLength: number) {

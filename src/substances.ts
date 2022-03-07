@@ -3,7 +3,7 @@ import { Colors } from "./ui";
 import * as Statuses from "./statuses";
 
 export class Slime extends Substance {
-  defaultTimer = 3;
+  defaultTimer = 5;
   fg = Colors.Green;
   bg = Colors.Green1;
   onEnter(entity: Entity): void {
@@ -13,7 +13,7 @@ export class Slime extends Substance {
 }
 
 export class Magma extends Substance {
-  defaultTimer = 3;
+  defaultTimer = 5;
   fg = Colors.Orange3;
   bg = Colors.Red1;
   onEnter(entity: Entity): void {

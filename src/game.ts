@@ -1,13 +1,25 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
+import { DealDamageEvent, DeathEvent, dispatch, EventHandler, GameEvent, KillEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
 import { Glyph, Terminal } from "./terminal";
 import { Colors, UI } from "./ui";
 
 const ENERGY_REQUIRED_PER_TURN = 12;
 
-export class Game {
+export type GameMessageComponent = string | number | Entity | DamageType | Status | Tile;
+export type GameMessage = GameMessageComponent[];
+
+export class Game extends EventHandler {
   ui: UI = null!;
   level: Level = null!;
   player: Player = null!;
+  messages: GameMessage[] = [];
+  handlers: EventHandler[] = [];
+
+  onEvent(event: GameEvent): void {
+    for (let handler of this.handlers) {
+      dispatch(handler, event);
+    }
+  }
 
   async* update(): AsyncGenerator<number, void> {
     // Only update the entities that existed at the start of this turn
@@ -33,6 +45,10 @@ export class Game {
     }
 
     yield 1;
+  }
+
+  log(...message: GameMessage) {
+    this.messages.push(message);
   }
 }
 
@@ -144,12 +160,13 @@ type TileTypeProps = {
   onUpdate?: TileType["onUpdate"];
 }
 
-export class TileType {
+export class TileType extends EventHandler {
   glyph: Glyph | VariantGlyph;
   autotiling?: string[];
   walkable: boolean;
 
   constructor(props: TileTypeProps) {
+    super();
     this.glyph = props.glyph;
     this.autotiling = props.autotiling;
     this.walkable = props.walkable;
@@ -223,8 +240,55 @@ export const StatusGlyphs = {
   East: Glyph("\x0c", Colors.Red),
 };
 
+export class DamageType {
+  name: string;
+  description: string;
+  glyph: Glyph;
+
+  constructor(glyph: Glyph, name: string, description: string) {
+    this.glyph = glyph;
+    this.name = name;
+    this.description = description;
+  }
+
+  static Melee = new DamageType(
+    Glyph("\xa1", Colors.Grey3),
+    "Melee",
+    ""
+  );
+
+  static Poison = new DamageType(
+    Glyph("\x07", Colors.Green),
+    "Poison",
+    ""
+  );
+
+  static Explosion = new DamageType(
+    Glyph("\xa5", Colors.Orange4),
+    "Explosion",
+    ""
+  );
+
+  static Stone = new DamageType(
+    Glyph("\x81", Colors.Grey3),
+    "Stone",
+    ""
+  );
+
+  static Misc = new DamageType(
+    Glyph("\x0b", Colors.Grey3),
+    "Damage",
+    ""
+  );
+}
+
+export function isDamageType(value: any): value is DamageType {
+  return Object.values(DamageType).includes(value);
+}
+
 export interface Damage {
   amount: number;
+  type: DamageType;
   direction?: Vector.Vector;
   knockback?: boolean;
   statuses?: Status[];
@@ -242,7 +306,7 @@ export interface Stat {
   max: number;
 }
 
-export abstract class Status {
+export abstract class Status extends EventHandler {
   abstract name: string;
   abstract description: string;
   abstract glyph: Glyph;
@@ -250,11 +314,11 @@ export abstract class Status {
   turns: number = Infinity;
   onAdded() {}
   onRemoved() {}
-  onDealDamage(damage: Damage) {}
-  onTakeDamage(damage: Damage) {}
+  onUpdate() {}
 
   update() {
     this.turns -= 1;
+    this.onUpdate();
   }
 }
 
@@ -265,7 +329,7 @@ export function Stat(current: number, max: number = current): Stat {
   return { current, max };
 }
 
-export abstract class Entity {
+export abstract class Entity extends EventHandler {
   level: Level = null!;
   pos: Point.Point = { x: 0, y: 0 };
   hp?: Stat;
@@ -287,9 +351,13 @@ export abstract class Entity {
     return this.level.getTile(this.pos.x, this.pos.y);
   }
 
-  onEnterTile(tile: Tile) {
+  onEvent(event: GameEvent): void {
     for (let vestige of this.vestiges) {
-      vestige.onTileEnter(tile);
+      dispatch(vestige, event);
+    }
+
+    for (let status of this.statuses) {
+      dispatch(status, event);
     }
   }
 
@@ -297,38 +365,29 @@ export abstract class Entity {
     this.vestiges.push(vestige);
     vestige.owner = this;
     vestige.onAdded();
-  }
-
-  removeVestige(vestige: Vestige) {
-    vestige.onRemoved();
-    vestige.owner = undefined!;
-    this.vestiges.splice(this.vestiges.indexOf(vestige), 1);
+    VestigeAddedEvent(this, vestige);
   }
 
   addStatus(status: Status) {
     let existing = this.getStatus(status.constructor as any);
 
-    for (let vestige of this.vestiges) {
-      vestige.onStatusAdded(status);
-    }
-
     if (existing) {
       existing.turns += status.turns;
+      status = existing;
     } else {
       this.statuses.push(status);
       status.entity = this;
       status.onAdded();
     }
+
+    StatusAddedEvent(this, status || existing);
   }
 
   removeStatus(status: Status) {
-    for (let vestige of this.vestiges) {
-      vestige.onStatusRemoved(status);
-    }
-
     status.onRemoved();
     status.entity = undefined!;
     this.statuses.splice(this.statuses.indexOf(status), 1);
+    StatusRemovedEvent(this, status);
   }
 
   removeStatusType(statusType: StatusType) {
@@ -349,33 +408,18 @@ export abstract class Entity {
   }
 
   attack(target: Entity, damage: Damage) {
-    damage.dealer = this;
-
-    for (let vestige of this.vestiges) {
-      vestige.onDealDamage(damage);
-    }
-
-    for (let status of this.statuses) {
-      status.onDealDamage(damage);
-    }
-
+    DealDamageEvent(this, target, damage);
     target.attacked({ damage, attacker: this });
   }
 
   attacked(attack: Attack) {
-    this.applyDamage(attack.damage);
+    this.applyDamage(attack.damage, attack.attacker);
   }
 
-  applyDamage(damage: Damage) {
+  applyDamage(damage: Damage, dealer?: Entity) {
     if (this.hp == null) return;
 
-    for (let vestige of this.vestiges) {
-      vestige.onTakeDamage(damage);
-    }
-
-    for (let status of this.statuses) {
-      status.onTakeDamage(damage);
-    }
+    TakeDamageEvent(this, damage, dealer);
 
     if (damage.statuses) {
       for (let status of damage.statuses) {
@@ -390,22 +434,18 @@ export abstract class Entity {
     this.hp.current = Math.max(this.hp.current - damage.amount, 0);
 
     if (this.hp.current <= 0) {
-      this.die(damage.dealer);
+      this.die(damage, dealer);
     }
   }
 
-  die(killer?: Entity) {
+  die(damage?: Damage, killer?: Entity) {
     this.dead = true;
 
     if (killer) {
-      for (let vestige of killer.vestiges) {
-        vestige.onKill(this);
-      }
+      KillEvent(killer, this, damage);
     }
 
-    for (let vestige of this.vestiges) {
-      vestige.onDeath();
-    }
+    DeathEvent(this, damage, killer);
 
     if (this.dead) {
       this.level.removeEntity(this);
@@ -507,41 +547,41 @@ export abstract class Entity {
 
     // Can't walk into solid tiles
     if (tile.type.walkable === false) {
-      for (let vestige of this.vestiges) {
-        vestige.onTileBump(tile);
-      }
-
+      dispatch(this, { type: "tile-bump", tile, entity: this });
       return false;
     }
 
     // Attempt to melee any entities stood here
     let entities = this.level.getEntitiesAt(x, y);
 
-    if (entities.length > 0) {
-      let damage = this.getMeleeDamage();
+    if (entities.length) {
+      for (let entity of entities) {
+        let damage = this.getMeleeDamage();
+        if (damage == null) continue;
 
-      if (damage) {
         let vec = Vector.fromPoints(this.pos, { x, y });
         Vector.normalize(vec);
         damage.direction = vec.map(Math.round) as Vector.Vector;
 
-        for (let vestige of this.vestiges) {
-          vestige.onMeleeDamage(damage);
-        }
+        dispatch(this, {
+          type: "deal-damage",
+          entity: this,
+          damage,
+          target: entity,
+        });
 
-        for (let entity of entities) {
-          this.attack(entity, damage);
-        }
+        this.attack(entity, damage);
       }
 
-      return damage != null;
+      return true;
     }
 
     this.pos.x = x;
     this.pos.y = y;
+    // TODO:
     tile.substance?.onEnter(this);
     tile.type.onEnter(this, tile);
-    this.onEnterTile(tile);
+    TileEnterEvent(this, tile);
 
     return true
   }
@@ -588,6 +628,12 @@ export class Player extends Entity {
   molten = false;
   ability: Ability | undefined;
 
+  onEvent(event: GameEvent): void {
+    if (this.ability) {
+      dispatch(this.ability, event);
+    }
+  }
+
   setAbility(ability: Ability) {
     this.ability = ability;
     this.ability.owner = this;
@@ -624,7 +670,11 @@ export class Player extends Entity {
   }
 
   useAbility(target: Direction.Direction | Entity | undefined): boolean {
-    if (this.ability == null || this.ability.canUse() === false) {
+    if (this.ability == null) {
+      return false;
+    }
+
+    if (this.ability.canUse() === false) {
       return false;
     }
 
@@ -633,12 +683,13 @@ export class Player extends Entity {
 
   getMeleeDamage(): Damage {
     return {
+      type: DamageType.Melee,
       amount: 1,
     };
   }
 }
 
-export abstract class Substance {
+export abstract class Substance extends EventHandler {
   abstract fg: number;
   abstract bg: number;
   abstract defaultTimer: number;
@@ -661,17 +712,14 @@ export abstract class Substance {
   onUpdate(entity: Entity) {}
 }
 
-export abstract class Ability {
+export abstract class Ability extends EventHandler {
   owner: Player = undefined!;
   abstract name: string;
   abstract description: string;
   abstract glyph: Glyph;
   abstract targeting: TargetingMode;
 
-  onTileEnter(entity: Entity, tile: Tile) {}
   onUpdate(entity: Entity) {}
-  onTakeDamage(damage: Damage) {}
-  onDealDamage(damage: Damage) {}
   canUse(): boolean { return false; }
   use(target?: Entity | Direction.Direction): boolean { return true; }
 }
@@ -682,7 +730,7 @@ export enum TargetingMode {
   None = "none",
 }
 
-export abstract class Vestige {
+export abstract class Vestige extends EventHandler {
   owner: Entity = undefined!;
   abstract name: string;
   abstract description: string;
@@ -690,14 +738,5 @@ export abstract class Vestige {
 
   onAdded() {}
   onRemoved() {}
-  onTileEnter(tile: Tile) {}
   onUpdate() {}
-  onTileBump(tile: Tile) {}
-  onDealDamage(damage: Damage) {}
-  onTakeDamage(damage: Damage) {}
-  onMeleeDamage(damage: Damage) {}
-  onDeath() {}
-  onKill(entity: Entity) {}
-  onStatusAdded(status: Status) {}
-  onStatusRemoved(status: Status) {}
 }

@@ -1,4 +1,5 @@
-import { Damage, Player, Status } from "./game";
+import { DealDamageEvent, TakeDamageEvent } from "./events";
+import { DamageType, Player, Status } from "./game";
 import { assert } from "./helpers";
 import { Glyph } from "./terminal";
 import { Colors } from "./ui";
@@ -17,11 +18,11 @@ export class Molten extends Status {
     delete this.entity.statusGlyph;
   }
 
-  onDealDamage(damage: Damage): void {
+  onDealDamage({ damage }: DealDamageEvent): void {
     damage.amount *= 2;
   }
 
-  onTakeDamage(damage: Damage): void {
+  onTakeDamage({ damage }: TakeDamageEvent): void {
     damage.amount *= 2;
   }
 }
@@ -29,7 +30,7 @@ export class Molten extends Status {
 export class Stunned extends Status {
   name = "Stunned";
   glyph = Glyph("\x09", Colors.Grey3);
-  description = "Stunned";
+  description = "Miss a turn";
 
   constructor(turns: number) {
     super();
@@ -74,7 +75,10 @@ export class Poisoned extends Status {
 
     // Poison can't kill
     if (this.entity.hp.current > 1) {
-      this.entity.applyDamage({ amount: 1 });
+      this.entity.applyDamage({
+        type: DamageType.Poison,
+        amount: 1,
+      });
 
       if (this.entity instanceof Player) {
         console.log("apply poison")
@@ -101,7 +105,7 @@ export class Hardened extends Status {
     delete this.entity.statusGlyph;
   }
 
-  onTakeDamage(damage: Damage): void {
+  onTakeDamage({ damage }: TakeDamageEvent): void {
     if (damage.dealer) {
       let dmg = { ...damage };
       damage.dealer.attack(damage.dealer, dmg);

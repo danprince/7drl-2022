@@ -1,5 +1,5 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
-import { Attack, Damage, Effect, Entity, Speeds, Stat, StatusGlyphs, Substance, UpdateResult } from "./game";
+import { Attack, Damage, DamageType, Effect, Entity, Speeds, Stat, StatusGlyphs, Substance, UpdateResult } from "./game";
 import { assert } from "./helpers";
 import { Glyph } from "./terminal";
 import { Colors } from "./ui";
@@ -97,6 +97,7 @@ export class Boar extends Entity {
       if (entities.length) {
         for (let entity of entities) {
           this.attack(entity, {
+            type: DamageType.Melee,
             amount: 1,
             direction: [sx, sy],
           });
@@ -192,6 +193,62 @@ export class Ant extends Entity {
   }
 }
 
+export class Lizard extends Entity {
+  name = "Lizard";
+  description = "";
+  glyph = Glyph("\x12", Colors.Grey3);
+  hp = Stat(2);
+  speed = Speeds.Every2Turns;
+  triggeringEntity: Entity | undefined;
+  explosionTimer: number = 0;
+
+  attacked(attack: Attack): void {
+    super.attacked(attack);
+    if (this.dead) return;
+    this.triggeringEntity = attack.attacker;
+    this.glyph.fg = Colors.Orange2;
+    this.explosionTimer = 3;
+  }
+
+  update() {
+    if (this.explosionTimer > 0) {
+      this.explosionTimer -= 1;
+
+      if (this.explosionTimer <= 0) {
+        this.level.addEffect(this.explode());
+      }
+    }
+
+    return super.update();
+  }
+
+  *explode(): Effect {
+    yield* Effects.Explosion({
+      pos: this.pos,
+      size: 3,
+      glyph: Glyph("\x90", Colors.Orange2, Colors.Orange1),
+      attacker: this.triggeringEntity || this,
+      getDamage: () => this.getExplosionDamage(),
+    });
+
+    this.die();
+  }
+
+  getExplosionDamage(): Damage {
+    return {
+      type: DamageType.Explosion,
+      amount: 1,
+      statuses: [new Statuses.Stunned(2)],
+    };
+  }
+
+  takeTurn(): UpdateResult {
+    let direction = RNG.element(Direction.CARDINAL_DIRECTIONS);
+    let [dx, dy] = Direction.toVector(direction);
+    return this.moveBy(dx, dy);
+  }
+}
+
 export class Maguana extends Entity {
   name = "Maguana";
   description = "";
@@ -231,6 +288,7 @@ export class Maguana extends Entity {
 
   getExplosionDamage(): Damage {
     return {
+      type: DamageType.Explosion,
       amount: 1,
       statuses: [new Statuses.Stunned(2)],
     };
@@ -263,7 +321,7 @@ export class Imp extends Entity {
   glyph = Glyph("\x17", Colors.Blue);
   speed = Speeds.EveryTurn;
   hp = { current: 2, max: 2 };
-  status: "searching" | "attacking" | "retreating" = "searching";
+  status: "searching" | "attacking" = "searching";
   target: Entity | undefined;
 
   takeTurn(): UpdateResult {
@@ -288,25 +346,16 @@ export class Imp extends Entity {
         }
 
         if (Point.distance(this.pos, this.target.pos) <= 1) {
-          this.status = "retreating";
-          this.attack(this.target, { amount: 1 });
+          this.status = "attacking";
+          this.attack(this.target, {
+            type: DamageType.Melee,
+            amount: 1
+          });
+          this.moveAway(this.target);
           return true;
         } else {
           return this.moveTowards(this.target);
         }
-      }
-
-      case "retreating": {
-        if (this.target == null || this.target.dead) {
-          this.status = "searching";
-          return true;
-        }
-
-        let dx = this.pos.x - this.target.pos.x;
-        let dy = this.pos.y - this.target.pos.y;
-        let moved = this.moveBy(Math.sign(dx), Math.sign(dy));
-        if (moved) this.status = "attacking";
-        return moved;
       }
     }
   }
@@ -382,6 +431,7 @@ export class FossilKnight extends Entity {
 
   getMeleeDamage(): Damage {
     return {
+      type: DamageType.Melee,
       amount: 3,
     };
   }
@@ -421,6 +471,7 @@ export class Snake extends Entity {
 
   getMeleeDamage(): Damage {
     return {
+      type: DamageType.Melee,
       amount: 1,
       statuses: [new Statuses.Poisoned(3)],
     };
@@ -504,6 +555,7 @@ export class Worm extends Entity {
 
   createSpitDamage(): Damage {
     return {
+      type: DamageType.Misc,
       amount: 0,
       statuses: [new Statuses.Poisoned(3)],
     };
@@ -579,6 +631,8 @@ export class Cultist extends Entity {
       this.level.removeEntity(this.portal);
     }
 
+    game.log(this, "starts chanting...");
+
     this.status = "summoning";
     this.portal = new CultistPortal();
     this.portal.pos = position;
@@ -626,6 +680,7 @@ export class Demon extends Entity {
 
   getMeleeDamage(): Damage {
     return {
+      type: DamageType.Melee,
       amount: 3,
     };
   }
@@ -644,6 +699,7 @@ export class Krokodil extends Entity {
 
   getMeleeDamage(): Damage {
     return {
+      type: DamageType.Melee,
       amount: 2,
     };
   }
@@ -655,6 +711,29 @@ export class PunchingBag extends Entity {
   glyph = Glyph("\xac", Colors.Orange4);
   hp = Stat(99);
   speed = Speeds.Never;
+}
+
+export class Golem extends Entity {
+  name = "Golem";
+  description = "";
+  glyph = Glyph("\x1d", Colors.Grey3);
+  speed = Speeds.Every3Turns;
+
+  takeTurn() {
+    if (this.canSee(game.player)) {
+      return this.moveTowards(this.level.game.player);
+    } else {
+      return this.moveIn(RNG.element(Direction.CARDINAL_DIRECTIONS));
+    }
+  }
+
+  getMeleeDamage(): Damage {
+    return {
+      type: DamageType.Melee,
+      amount: 1,
+      knockback: true,
+    };
+  }
 }
 
 export class MagmaBomb extends Entity {
@@ -675,7 +754,10 @@ export class MagmaBomb extends Entity {
         size: 3,
         glyph: Glyph("\x90", Colors.Orange2, Colors.Orange1),
         attacker: this.owner,
-        getDamage: () => ({ amount: 3 }),
+        getDamage: () => ({
+          type: DamageType.Explosion,
+          amount: 3,
+        }),
       }));
 
       game.level.removeEntity(this);

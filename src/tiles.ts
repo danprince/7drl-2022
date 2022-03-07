@@ -1,5 +1,6 @@
 import { TileType } from "./game";
 import { Molten } from "./statuses";
+import { Glyph } from "./terminal";
 import { Colors } from "./ui";
 
 export let Floor = new TileType({
@@ -32,4 +33,9 @@ export let Block = new TileType({
     char: ["\x80", "\x81", "\x82"],
     fg: [Colors.Grey2],
   },
+});
+
+export let PressurePlate = new TileType({
+  walkable: true,
+  glyph: Glyph("\x85", Colors.Grey1),
 });

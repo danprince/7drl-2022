@@ -1,14 +1,15 @@
 import { Direction, Point, Vector } from "silmarils";
-import { Entity, Game, PlayerAction } from "./game";
-import { delayAnimationFrame, directionToGridVector, getDirectionChar } from "./helpers";
+import { DamageType, Entity, Game, PlayerAction, Status, Tile } from "./game";
+import { delayAnimationFrame, directionToGridVector, getDirectionChar, glyphToString } from "./helpers";
 import { Poisoned } from "./statuses";
-import { Terminal, VirtualTerminal } from "./terminal";
+import { singleLineLength, Terminal, VirtualTerminal } from "./terminal";
 import { View, Colors } from "./ui";
 
 export class GameView extends View {
   viewport = new VirtualTerminal(0, 0, 0, 0);
   hud = new VirtualTerminal(0, 0, 0, 0);
   sidebar = new VirtualTerminal(0, 0, 0, 0);
+  log = new VirtualTerminal(0, 0, 0, 0);
   framerate = 1000 / 40;
 
   constructor(private game: Game) {
@@ -45,6 +46,7 @@ export class GameView extends View {
     this.drawViewport();
     this.drawHud();
     this.drawSidebar();
+    this.drawLog();
   }
 
   attach(terminal: Terminal) {
@@ -52,12 +54,11 @@ export class GameView extends View {
     this.viewport.bounds.height = this.game.level.height;
     this.viewport.bounds.x =
       Math.floor(terminal.width / 2 - this.viewport.bounds.width / 2);
-    this.viewport.bounds.y =
-      Math.floor(terminal.height / 2 - this.viewport.bounds.height / 2);
+    this.viewport.bounds.y = 4;
     this.viewport.attach(terminal);
 
     this.hud.bounds.x = this.viewport.bounds.x;
-    this.hud.bounds.y = this.viewport.bounds.y - 1;
+    this.hud.bounds.y = this.viewport.bounds.y - 2;
     this.hud.bounds.width = this.game.level.width;
     this.hud.bounds.height = 1;
     this.hud.attach(terminal);
@@ -67,11 +68,87 @@ export class GameView extends View {
     this.sidebar.bounds.width = 2;
     this.sidebar.bounds.height = this.viewport.bounds.height;
     this.sidebar.attach(terminal);
+
+    this.log.bounds.x = this.viewport.bounds.x;
+    this.log.bounds.y = this.viewport.bounds.y + this.viewport.bounds.height + 1;
+    this.log.bounds.width = this.viewport.bounds.width;
+    this.log.bounds.height = 5;
+    this.log.attach(terminal);
+  }
+
+  drawLog() {
+    let terminal = this.log;
+    let ty = 0;
+    let tx = 0;
+    let after = () => {};
+
+    for (let i = game.messages.length - 1; i >=0; i--) {
+      let message = game.messages[i];
+      let current = i === game.messages.length - 1;
+      let color = current ? Colors.White : Colors.Grey4;
+
+      for (const part of message) {
+        // Keep a copy of this location for popups
+        const px = tx;
+        const py = ty;
+
+        if (part instanceof Entity) {
+          terminal.putGlyph(tx, ty, part.glyph);
+          if (!part.dead && terminal.isPointerOver(tx, ty)) {
+            this.viewport.put(part.pos.x, part.pos.y - 1, "\x0F", Colors.White);
+          }
+          tx += 1;
+        } else if (part instanceof Tile) {
+          terminal.putGlyph(tx, ty, part.glyph);
+          if (terminal.isPointerOver(tx, ty)) {
+            this.viewport.put(part.pos.x, part.pos.y - 1, "\x0F", Colors.White);
+          }
+          tx += 1;
+        } else if (part instanceof Status) {
+          terminal.putGlyph(tx, ty, part.glyph);
+
+          if (terminal.isPointerOver(tx, ty)) {
+            after = () => terminal.popup({
+              x: px,
+              y: py + 1,
+              title: `${glyphToString(part.glyph)} ${part.name}`,
+              text: part.description,
+            });
+          }
+
+          tx += 1;
+        } else if (part instanceof DamageType) {
+          terminal.putGlyph(tx, ty, part.glyph);
+          if (terminal.isPointerOver(tx, ty)) {
+            after = () => terminal.popup({
+              x: px + 2,
+              y: py,
+              title: part.name,
+              text: part.description,
+            });
+          }
+          tx += 1;
+        } else {
+          let text = part.toString();
+          terminal.write(tx, ty, text, color);
+          tx += singleLineLength(text);
+        }
+
+        tx += 1;
+      }
+
+      ty += 1;
+      tx = 0;
+      if (ty >= terminal.height) {
+        break;
+      }
+    }
+
+    after();
   }
 
   drawSidebar() {
     let terminal = this.sidebar;
-    terminal.vline(1, 0, terminal.height);
 
     for (let i = 0; i < game.player.vestiges.length; i++) {
       let vestige = game.player.vestiges[i];
@@ -79,7 +156,7 @@ export class GameView extends View {
 
       if (terminal.isPointerOver(0, i)) {
         terminal.popup({
-          x: 1,
+          x: 2,
           y: i,
           title: vestige.name,
           text: vestige.description,
@@ -100,9 +177,9 @@ export class GameView extends View {
       let usable = ability.canUse();
       let fg = usable ? ability.glyph.fg : Colors.Grey2;
       let bg = usable ? ability.glyph.bg : Colors.Grey1;
-      let x1 = this.hud.width - 1;
-      let x0 = x1 - ability.name.length - 1;
 
+      let x1 = this.hud.width - 1;
+      let x0 = this.hud.width - ability.name.length - 2;
       this.hud.put(x1, 0, ability.glyph.char, fg, bg);
       this.hud.print(x0, 0, ability.name, fg);
 
@@ -112,7 +189,6 @@ export class GameView extends View {
           y: 1,
           align: "start",
           justify: "end",
-          title: ability.name,
           text: ability.description,
         });
       }
@@ -121,6 +197,8 @@ export class GameView extends View {
 
   drawViewport() {
     let { game, viewport } = this;
+
+    viewport.frame(Colors.Grey1);
 
     for (let y = 0; y < game.level.height; y++) {
       for (let x = 0; x < game.level.width; x++) {
@@ -159,22 +237,27 @@ export class GameView extends View {
   }
 
   drawEntityPopup(entity: Entity) {
-    let text: string[] = [];
+    let text = "";
 
-    if (entity.description) {
-      text.push(entity.description, "");
+    if (entity.hp) {
+      text += `{31}\x03{1}${entity.hp.current}{/} `;
     }
 
-    if (entity.statuses.length > 0) {
-      text.push(...this.getStatusDescriptions(entity));
+    text += entity.name;
+
+    if (entity.statuses.length) {
+      text += " ";
+    }
+
+    for (let status of entity.statuses) {
+      text += glyphToString(status.glyph);
     }
 
     this.viewport.popup({
-      x: this.viewport.width / 2,
+      x: Math.floor(this.viewport.width / 2),
       y: this.viewport.height,
-      title: `${this.renderHitpoints(entity)} ${entity.name}`,
-      text: text.join("\n"),
-      textColor: Colors.Grey3,
+      text,
+      textColor: Colors.Grey4,
       align: "end",
       justify: "center",
     });
@@ -188,14 +271,6 @@ export class GameView extends View {
       let turns = status.turns !== Infinity ? `for {5}${status.turns}{6} turns` : ``;
       return `${glyph}${name}\n${description} ${turns}`;
     });
-  }
-
-  renderHitpoints(entity: Entity) {
-    if (entity.hp) {
-      return `{31}\x03{1}${entity.hp.current}{/}`;
-    } else {
-      return "";
-    }
   }
 
   onKeyDown(event: KeyboardEvent) {
@@ -240,18 +315,22 @@ export class GameView extends View {
 
   tryUseAbility() {
     let { ability } = game.player;
+    if (ability == null) return;
 
-    if (ability && ability.canUse()) {
-      switch (ability.targeting) {
-        case "none":
-          this.game.player.setNextAction({ type: "use", target: undefined });
-          break;
-        case "directional":
-          this.ui.open(new DirectionTargetingView(this.viewport, target => {
-            this.game.player.setNextAction({ type: "use", target });
-          }));
-          break;
-      }
+    if (ability.canUse() === false) {
+      game.log(`Can't do that now`);
+      return;
+    }
+
+    switch (ability.targeting) {
+      case "none":
+        this.game.player.setNextAction({ type: "use", target: undefined });
+        break;
+      case "directional":
+        this.ui.open(new DirectionTargetingView(this.viewport, target => {
+          this.game.player.setNextAction({ type: "use", target });
+        }));
+        break;
     }
   }
 }

@@ -1,4 +1,5 @@
 import { Direction } from "silmarils";
+import { Glyph } from "./terminal";
 
 export function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -37,7 +38,9 @@ export function delayAnimationFrame(delay: number = 0) {
   });
 }
 
-export const DIRECTION_CHARS = {
+export const DIRECTION_CHARS: {
+  [K in Direction.Direction]: string
+} = {
   [Direction.NORTH]: "\x0e",
   [Direction.SOUTH]: "\x0f",
   [Direction.WEST]: "\x0d",
@@ -66,3 +69,10 @@ export function percentToString(num: number): string {
   return Math.floor(num * 100) + "%";
 }
 
+export function glyphToString(glyph: Glyph) {
+  if (glyph.bg == null) {
+    return `{${glyph.fg}}${glyph.char}{/}`;
+  } else {
+    return `{${glyph.fg}:${glyph.bg}}${glyph.char}{/}`;
+  }
+}
