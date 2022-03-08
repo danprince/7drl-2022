@@ -14,6 +14,7 @@ interface Key {
 enum TileMarker {
   Floor,
   Wall,
+  Exit,
 }
 
 class Builder {
@@ -35,6 +36,14 @@ class Builder {
   get(x: number, y: number): TileMarker | undefined {
     if (x >= 0 && y >= 0 && x < this.width && y < this.height) {
       return this.map[x + y * this.width];
+    } else {
+      return;
+    }
+  }
+
+  set(x: number, y: number, marker: TileMarker) {
+    if (x >= 0 && y >= 0 && x < this.width && y < this.height) {
+      return this.map[x + y * this.width] = marker;
     } else {
       return;
     }
@@ -86,6 +95,28 @@ class Builder {
     );
   }
 
+  randomCell() {
+    return {
+      x: PRNG.int(this.rng, 0, this.width),
+      y: PRNG.int(this.rng, 0, this.height),
+    };
+  }
+
+  swapOne(src: TileMarker, dst: TileMarker): Builder {
+    for (let retry = 0; retry < 100; retry++) {
+      let { x, y } = this.randomCell();
+      let marker = this.get(x, y);
+
+      if (marker === src) {
+        console.log("door", x, y);
+        this.set(x, y, dst);
+        return this;
+      }
+    }
+
+    throw new Error("Could not swap. Ran out of tries");
+  }
+
   build(mapper: (marker: TileMarker) => TileType): Level {
     let level = new Level(this.width, this.height);
 
@@ -96,12 +127,24 @@ class Builder {
       level.setTile(x, y, tile);
     }
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       let entity = PRNG.weighted<Entity>(this.rng, [
         { weight: 1, value: new Entities.Mantleshell },
         { weight: 1, value: new Entities.Wizard },
         { weight: 1, value: new Entities.Thwomp },
         { weight: 1, value: new Entities.Boulder },
+        { weight: 1, value: new Entities.Cultist },
+        { weight: 1, value: new Entities.Boar },
+        { weight: 1, value: new Entities.FossilKnight },
+        { weight: 1, value: new Entities.Frog },
+        { weight: 1, value: new Entities.Imp },
+        { weight: 1, value: new Entities.Krokodil },
+        { weight: 1, value: new Entities.Lizard },
+        { weight: 1, value: new Entities.Maguana },
+        { weight: 1, value: new Entities.Slimeshell },
+        { weight: 1, value: new Entities.Stoneshell },
+        { weight: 1, value: new Entities.Snake },
+        { weight: 1, value: new Entities.Ant },
       ]);
 
       let x = PRNG.int(this.rng, 0, this.width);
@@ -189,10 +232,13 @@ export function createTutorialLevel(): Level {
 export function createLevel(): Level {
   return new Builder(21, 21)
     .caves(0.6, 10)
+    .swapOne(TileMarker.Floor, TileMarker.Exit)
     .build(marker => {
       switch (marker) {
         case TileMarker.Wall:
           return Tiles.Wall;
+        case TileMarker.Exit:
+          return Tiles.Doorway;
         case TileMarker.Floor:
           if (RNG.chance(0.05)) {
             return Tiles.Bones;

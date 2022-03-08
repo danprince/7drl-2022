@@ -146,13 +146,8 @@ export class Grapple extends Ability {
   glyph = Glyph(Chars.Grapple, Colors.Blue, Colors.Blue1);
   targeting = TargetingMode.Directional;
 
-  canUse(): boolean {
-    return game.player.hasStatus(Molten);
-  }
-
   use(direction: Direction.Direction) {
     game.level.addEffect(this.grapple(direction));
-    game.player.removeStatusType(Molten);
     return true;
   }
 
@@ -198,9 +193,9 @@ export class Grapple extends Ability {
       assert(target instanceof Entity, "can only grapple entities");
 
       while (true) {
-        let moved = target.moveBy(inv[0], inv[1]);
+        target.moveBy(inv[0], inv[1]);
 
-        if (!moved) {
+        if (!target.didMove) {
           target.addStatus(new Stunned(2));
           break;
         }
@@ -210,7 +205,7 @@ export class Grapple extends Ability {
     } else {
       while (true) {
         let moved = game.player.moveBy(vec[0], vec[1]);
-        if (!moved) break;
+        if (!moved || !this.owner.didMove) break;
         yield 1;
       }
     }
@@ -275,7 +270,7 @@ export class Dart extends Throwable {
   }
 }
 
-export class MagmaCharge extends Ability {
+export class Charge extends Ability {
   name = "Charge";
   description = "";
   targeting = TargetingMode.None;

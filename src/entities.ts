@@ -98,8 +98,8 @@ export class Thwomp extends Entity {
     this.intentGlyph = undefined;
 
     while (true) {
-      let moved = this.moveIn(dir);
-      if (!moved) break;
+      this.moveIn(dir);
+      if (!this.didMove) break;
       yield 1;
     }
   }
@@ -288,6 +288,7 @@ export class Boar extends Entity {
       }
 
       case "charging": {
+        this.intentGlyph = undefined;
         this.level.addEffect(this.charge());
         return true;
       }
@@ -912,7 +913,7 @@ export class Boulder extends Entity {
     if (this.rollDirection) {
       let [dx, dy] = Direction.toVector(this.rollDirection);
       let moved = this.moveBy(dx, dy);
-      if (moved === false) {
+      if (moved === false && !this.didMove) {
         this.rollDirection = undefined;
       }
     }

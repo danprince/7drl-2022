@@ -6,6 +6,7 @@ import fontUrl from "../font.png";
 import { loadImage } from "./helpers";
 import * as Levels from "./levels";
 import * as Handlers from "./handlers";
+import { Grapple } from "./abilities";
 
 declare global {
   const game: Game;
@@ -24,12 +25,12 @@ async function preload() {
 }
 
 async function start() {
-  let level = game.level = Levels.createLevel();
-  let player = game.player = new Player();
-  player.hp.current = 3;
-  player.pos = { x: 10, y: 10 };
-  level.addEntity(player);
-  level.autotile();
+  let level = Levels.createLevel();
+  let player = new Player();
+  game.setPlayer(player);
+  game.setLevel(level);
+
+  game.player.setAbility(new Grapple());
 
   // Setup global handlers
   game.handlers.push(new Handlers.MessageLogHandler);

@@ -1,6 +1,6 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
 import { Chars } from "./chars";
-import { DealDamageEvent, DeathEvent, dispatch, EventHandler, GameEvent, KillEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
+import { DealDamageEvent, DeathEvent, DespawnEvent, EventHandler, GameEvent, KillEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
 import { directionToGridVector } from "./helpers";
 import { Glyph, Terminal } from "./terminal";
 import { Colors, UI } from "./ui";
@@ -19,8 +19,23 @@ export class Game extends EventHandler {
 
   onEvent(event: GameEvent): void {
     for (let handler of this.handlers) {
-      dispatch(handler, event);
+      event.sendTo(handler);
     }
+  }
+
+  setLevel(level: Level) {
+    this.level = level;
+    this.level.autotile();
+
+    this.level.addEntity(this.player);
+    this.player.pos = {
+      x: RNG.int(0, this.level.width),
+      y: RNG.int(0, this.level.width),
+    };
+  }
+
+  setPlayer(player: Player) {
+    this.player = player;
   }
 
   async* update(): AsyncGenerator<number, void> {
@@ -115,7 +130,7 @@ export class Level {
     }
 
     entity.level = this;
-    SpawnEvent(entity);;
+    new SpawnEvent(entity).dispatch();
   }
 
   removeEntity(entity: Entity) {
@@ -189,6 +204,7 @@ type TileTypeProps = {
   walkable: TileType["walkable"];
   glyph: TileType["glyph"];
   autotiling?: TileType["autotiling"];
+  diggable?: TileType["diggable"];
   onEnter?: TileType["onEnter"];
   onUpdate?: TileType["onUpdate"];
 }
@@ -197,12 +213,14 @@ export class TileType extends EventHandler {
   glyph: Glyph | VariantGlyph;
   autotiling?: string[];
   walkable: boolean;
+  diggable: boolean;
 
   constructor(props: TileTypeProps) {
     super();
     this.glyph = props.glyph;
     this.autotiling = props.autotiling;
     this.walkable = props.walkable;
+    this.diggable = props.diggable || false;
     this.onEnter = props.onEnter ? props.onEnter : this.onEnter;
     this.onUpdate = props.onUpdate ? props.onUpdate : this.onUpdate;
   }
@@ -388,6 +406,7 @@ export abstract class Entity extends EventHandler {
   visionDistance = 10;
   skipNextTurn = false;
   vestiges: Vestige[] = [];
+  didMove = false;
 
   abstract glyph: Glyph;
   abstract name: string;
@@ -409,11 +428,11 @@ export abstract class Entity extends EventHandler {
 
   onEvent(event: GameEvent): void {
     for (let vestige of this.vestiges) {
-      dispatch(vestige, event);
+      event.sendTo(vestige);
     }
 
     for (let status of this.statuses) {
-      dispatch(status, event);
+      event.sendTo(status);
     }
   }
 
@@ -421,7 +440,7 @@ export abstract class Entity extends EventHandler {
     this.vestiges.push(vestige);
     vestige.owner = this;
     vestige.onAdded();
-    VestigeAddedEvent(this, vestige);
+    new VestigeAddedEvent(this, vestige).dispatch();
   }
 
   addStatus(status: Status): boolean {
@@ -442,7 +461,7 @@ export abstract class Entity extends EventHandler {
       status.onAdded();
     }
 
-    StatusAddedEvent(this, status || existing);
+    new StatusAddedEvent(this, status || existing).dispatch();
     return true;
   }
 
@@ -450,7 +469,7 @@ export abstract class Entity extends EventHandler {
     status.onRemoved();
     status.entity = undefined!;
     this.statuses.splice(this.statuses.indexOf(status), 1);
-    StatusRemovedEvent(this, status);
+    new StatusRemovedEvent(this, status).dispatch();
   }
 
   removeStatusType(statusType: StatusType) {
@@ -471,7 +490,7 @@ export abstract class Entity extends EventHandler {
   }
 
   attack(target: Entity, damage: Damage) {
-    DealDamageEvent(this, target, damage);
+    new DealDamageEvent(this, target, damage).dispatch();
     target.attacked({ damage, attacker: this });
   }
 
@@ -482,7 +501,7 @@ export abstract class Entity extends EventHandler {
   applyDamage(damage: Damage, dealer?: Entity) {
     if (this.hp == null) return;
 
-    TakeDamageEvent(this, damage, dealer);
+    new TakeDamageEvent(this, damage, dealer).dispatch();
 
     if (damage.statuses) {
       for (let status of damage.statuses) {
@@ -505,13 +524,14 @@ export abstract class Entity extends EventHandler {
     this.dead = true;
 
     if (killer) {
-      KillEvent(killer, this, damage);
+      new KillEvent(killer, this, damage).dispatch();
     }
 
-    DeathEvent(this, damage, killer);
+    new DeathEvent(this, damage, killer).dispatch();
 
     if (this.dead) {
       this.level.removeEntity(this);
+      new DespawnEvent(this).dispatch();
     }
   }
 
@@ -610,7 +630,8 @@ export abstract class Entity extends EventHandler {
 
     // Can't walk into solid tiles
     if (tile.type.walkable === false) {
-      dispatch(this, { type: "tile-bump", tile, entity: this });
+      new TileBumpEvent(this, tile).dispatch();
+      this.didMove = false;
       return false;
     }
 
@@ -620,7 +641,7 @@ export abstract class Entity extends EventHandler {
     if (entities.length) {
       for (let entity of entities) {
         if (entity.pushable) {
-          PushEvent(this, entity);
+          new PushEvent(this, entity).dispatch();
           continue;
         }
 
@@ -634,15 +655,19 @@ export abstract class Entity extends EventHandler {
         this.attack(entity, damage);
       }
 
+      this.didMove = false;
       return true;
     }
 
     this.pos.x = x;
     this.pos.y = y;
-    // TODO:
+
+    // TODO: Tile should probably handle all of this
     tile.substance?.onEnter(this);
     tile.type.onEnter(this, tile);
-    TileEnterEvent(this, tile);
+    new TileEnterEvent(this, tile).dispatch();
+
+    this.didMove = true;
 
     return true
   }
@@ -685,13 +710,13 @@ export class Player extends Entity {
   description = "";
   glyph = Glyph(Chars.Creature, Colors.White);
   speed = Speeds.EveryTurn;
-  hp = { current: 3, max: 3 };
+  hp = Stat(10);
   molten = false;
   ability: Ability | undefined;
 
   onEvent(event: GameEvent): void {
     if (this.ability) {
-      dispatch(this.ability, event);
+      event.sendTo(this.ability);
     }
   }
 
@@ -781,7 +806,7 @@ export abstract class Ability extends EventHandler {
   abstract targeting: TargetingMode;
 
   onUpdate(entity: Entity) {}
-  canUse(): boolean { return false; }
+  canUse(): boolean { return true; }
   use(target?: Entity | Direction.Direction): boolean { return true; }
 }
 

@@ -24,7 +24,7 @@ export class Magma extends Substance {
 
 export class Ice extends Substance {
   defaultTimer = 5;
-  fg = Colors.Blue;
+  fg = Colors.Blue3;
   bg = Colors.Blue2;
   onEnter(entity: Entity): void {
     entity.addStatus(new Statuses.Frozen());

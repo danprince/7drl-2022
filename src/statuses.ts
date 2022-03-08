@@ -66,7 +66,7 @@ export class Poisoned extends Status {
   }
 
   modifyGlyph(glyph: Glyph): Glyph {
-    return { ...glyph, bg: Colors.Green1 };
+    return { ...glyph, fg: Colors.Green, bg: Colors.Green1 };
   }
 
   update(): void {

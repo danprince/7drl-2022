@@ -35,6 +35,7 @@ export const Chars = {
   Grapple: "\x1c",
   Time: "\x1d",
   Snowflake: "\x1e",
+  Stairs: "\x1f",
 
   // Entities
   Creature: "\x80",
@@ -71,8 +72,10 @@ export const Chars = {
   Block1: "\xc0",
   Block2: "\xc1",
   Block3: "\xc2",
+  Dot: "\xc4",
   Blocks: ["\xc0", "\xc1", "\xc2"],
   Ripples: "\xc3",
+  Doorway: "\xdf",
   Diagonals: createCharSet(0xc8, 2),
   Cobbles: createCharSet(0xc4, 4),
   BoneWalls: createCharSet(0xd0, 11),

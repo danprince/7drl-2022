@@ -11,13 +11,13 @@ import * as Effects from "./effects";
 import * as Events from "./events";
 import { Chars } from "./chars";
 
-const MELEE = `{1}\xA1{/}`;
-const POISON = `{15}\x07{/}`;
-const STUN = `{23}\x09{/}`;
-const KILL = `{1}\xa3{/}`;
-const KNOCKBACK = `{22}\x0c{/}`;
-const FISSURE = `{10:8}\x94{/}`;
-const HP = `{31}\x03{/}`;
+const MELEE = `{1}${Chars.Fist}{/}`;
+const POISON = `{15}${Chars.Droplet}{/}`;
+const STUN = `{23}${Chars.Stun}{/}`;
+const KILL = `{1}${Chars.Skull}{/}`;
+const KNOCKBACK = `{23}${Chars.East}{/}`;
+const FISSURE = `{10:8}${Chars.Fire}{/}`;
+const HP = `{31}${Chars.Heart}{/}`;
 const RESET = `{/}`;
 const GOOD = `{15}`;
 
@@ -27,7 +27,7 @@ export class Bores extends Vestige {
   glyph = Glyph(Chars.Spade, Colors.Grey3);
 
   onTileBump({ tile }: Events.TileBumpEvent): void {
-    if (tile.type === Tiles.Block) {
+    if (tile.type.diggable) {
       // TODO: Need to make sure takeTurn actually succeeds now
       let floor = new Tile(Tiles.Floor);
       game.level.setTile(tile.pos.x, tile.pos.y, floor);
@@ -244,8 +244,14 @@ export class Leech extends Vestige {
   glyph = Glyph(Chars.Worm, Colors.Red3);
   description = `Gain ${HP} on ${KILL}`;
 
-  onKill({ entity }: Events.KillEvent): void {
+  onKill(events: Events.KillEvent): void {
     assert(this.owner.hp, "hp required");
     this.owner.hp.current = Math.min(this.owner.hp.current + 1, this.owner.hp.max);
   }
+}
+
+export class Climber extends Vestige {
+  name = "Climber";
+  glyph = Glyph(Chars.Stairs, Colors.Red3);
+  description = `Gain ${HP} when you leave a level`;
 }

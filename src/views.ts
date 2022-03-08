@@ -241,8 +241,8 @@ export class DirectionTargetingView extends View {
       if (!inside) break;
       let empty = game.level.isEmpty(pos.x, pos.y);
       if (empty === false) blocked = true;
-      let color = blocked ? Colors.Grey2 : Colors.White;
-      this.viewport.put(terminal, pos.x, pos.y, "\x94", color);
+      let color = blocked ? Colors.Red2 : Colors.White;
+      this.viewport.put(terminal, pos.x, pos.y, Chars.Dot, color);
     }
 
     // Show arrow 
