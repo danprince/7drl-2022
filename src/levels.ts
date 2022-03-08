@@ -18,11 +18,11 @@ enum TileMarker {
   Exit,
 }
 
-interface DiggerOptions {
-  count: number;
-  iterations: number;
-  rotationChance: number;
-  spades: number[];
+enum Symmetry {
+  None = 0,
+  Horizontal = 1,
+  Vertical = 2,
+  Both = 3,
 }
 
 class Builder {
@@ -62,23 +62,60 @@ class Builder {
     return this;
   }
 
-  // TODO: Support different diggers using different kernels
-  // TODO: Export some interesting kernel shapes
-  // TODO: Symmetrical diggers
+  maze() {
+    this.fill(TileMarker.Wall);
+    let start = this.randomCell()
+    let stack = [start];
+    let seen = new Set<string>();
+
+    const countAdjacentWalls = (p: Point.Point): number => {
+      return Point
+        .mooreNeighbours(p)
+        .filter(pos => this.get(pos.x, pos.y) === TileMarker.Wall)
+        .length;
+    }
+
+    while (stack.length) {
+      let pos = stack.pop()!;
+      let score = countAdjacentWalls(pos);
+      if (score < 5) continue;
+
+      this.set(pos.x, pos.y, TileMarker.Floor);
+
+      let neighbours = Point.vonNeumannNeighbours(pos);
+      PRNG.shuffle(this.rng, neighbours);
+
+      for (let neighbour of neighbours) {
+        let key = `${neighbour.x}:${neighbour.y}`;
+        let score = countAdjacentWalls(neighbour);
+        if (score >= 5 && !seen.has(key)) {
+          stack.push(neighbour);
+          seen.add(key);
+        }
+      }
+    }
+
+    return this;
+  }
+
   diggers({
     count = 1,
     iterations = 10,
     spades = [0b000_010_000],
     turnChance = 0.1,
+    mutationChance = 0,
     turns = [Direction.rotateLeft45, Direction.rotateRight45],
     initialDirections = Direction.DIRECTIONS,
+    symmetry = Symmetry.None,
   }: {
     count?: number;
     iterations?: number;
     spades?: number[];
     turnChance?: number;
+    mutationChance?: number;
     turns?: ((dir: Direction.Direction) => Direction.Direction)[];
     initialDirections?: Direction.Direction[];
+    symmetry?: Symmetry;
   }) {
     interface Digger {
       dir: Direction.Direction,
@@ -97,6 +134,14 @@ class Builder {
       diggers.push({ dir, pos, spade });
     }
 
+    const dig = (x: number, y: number) => {
+      let tile = TileMarker.Floor;
+      this.set(x, y, tile);
+      if (symmetry & Symmetry.Vertical) this.set(this.width - 1 - x, y, tile);
+      if (symmetry & Symmetry.Horizontal) this.set(x, this.height - 1 - y, tile);
+      if (symmetry === Symmetry.Both) this.set(this.width - 1 - x, this.height - 1 - y, tile);
+    }
+
     for (let i = 0; i < iterations; i++) {
       for (let digger of diggers) {
         let { x, y } = digger.pos;
@@ -111,15 +156,15 @@ class Builder {
         let s  = digger.spade & 0b000_000_010;
         let se = digger.spade & 0b000_000_001;
 
-        if (nw) this.set(x - 1, y - 1, TileMarker.Floor);
-        if (n)  this.set(x - 0, y - 1, TileMarker.Floor);
-        if (ne) this.set(x + 1, y - 1, TileMarker.Floor);
-        if (w)  this.set(x - 1, y - 0, TileMarker.Floor);
-        if (c)  this.set(x - 0, y - 0, TileMarker.Floor);
-        if (e)  this.set(x + 1, y - 0, TileMarker.Floor);
-        if (sw) this.set(x - 1, y + 1, TileMarker.Floor);
-        if (s)  this.set(x - 0, y + 1, TileMarker.Floor);
-        if (se) this.set(x + 1, y + 1, TileMarker.Floor);
+        if (nw) dig(x - 1, y - 1);
+        if (n)  dig(x - 0, y - 1);
+        if (ne) dig(x + 1, y - 1);
+        if (w)  dig(x - 1, y - 0);
+        if (c)  dig(x - 0, y - 0);
+        if (e)  dig(x + 1, y - 0);
+        if (sw) dig(x - 1, y + 1);
+        if (s)  dig(x - 0, y + 1);
+        if (se) dig(x + 1, y + 1);
 
         let vec = directionToGridVector(digger.dir);
         Point.translate(digger.pos, vec);
@@ -127,7 +172,10 @@ class Builder {
         if (RNG.chance(turnChance)) {
           let turn = RNG.element(turns);
           digger.dir = turn(digger.dir);
-          console.log(turn, digger.dir)
+        }
+
+        if (RNG.chance(mutationChance)) {
+          digger.spade = RNG.element(spades);
         }
       }
     }
@@ -135,30 +183,40 @@ class Builder {
     return this;
   }
 
-  caves(iterations: number = 10) {
-    let outOfBoundsMarker = TileMarker.Wall;
-    // TODO: Extract CA logic
+  // TODO: Use Array2D
+  // TODO: Extract CA logic
+  cellularAutomata({
+    iterations = 10,
+    rules,
+    outOfBoundsMarker = TileMarker.Wall,
+  }: {
+    rules: [birth: number[], survival: number[]];
+    iterations?: number;
+    outOfBoundsMarker?: TileMarker
+  }) {
     for (let i = 0; i < iterations; i++) {
       let map: TileMarker[] = [];
 
       for (let { x, y } of this.cells()) {
         let tile = this.get(x, y);
+        if (tile == null) continue;
+
         let neighbours = Point.mooreNeighbours({ x, y });
 
-        let sameNeighbours = neighbours.filter(n => {
+        let score = neighbours.filter(n => {
           let neighbour = this.get(n.x, n.y) ?? outOfBoundsMarker;
-          return tile === neighbour;
-        });
+          return neighbour === TileMarker.Wall;
+        }).length;
 
-        let count = sameNeighbours.length;
+        let [birth, survival] = rules;
 
-        if (tile === TileMarker.Floor && count < 4) {
-          map[x + y * this.width] = TileMarker.Wall;
-        } else if (tile === TileMarker.Wall && count < 4) {
-          map[x + y * this.width] = TileMarker.Floor;
-        } else if (tile != null) {
-          map[x + y * this.width] = tile;
+        if (tile === TileMarker.Wall && !survival.includes(score)) {
+          tile = TileMarker.Floor;
+        } else if (tile === TileMarker.Floor && birth.includes(score)) {
+          tile = TileMarker.Wall;
         }
+
+        map[x + y * this.width] = tile;
       }
 
       this.map = map;
@@ -169,13 +227,15 @@ class Builder {
 
   noise(bias: number = 0.5) {
     for (let { x, y } of this.cells()) {
-      if (PRNG.chance(this.rng, 1 - bias)) {
-        this.map[x + y * this.width] = TileMarker.Wall;
-      }
+      this.map[x + y * this.width] = PRNG.chance(this.rng, bias)
+        ? TileMarker.Wall
+        : TileMarker.Floor;
     }
+
+    return this;
   }
 
-  randomCell() {
+  randomCell(): Point.Point {
     return {
       x: PRNG.int(this.rng, 0, this.width),
       y: PRNG.int(this.rng, 0, this.height),
@@ -188,7 +248,6 @@ class Builder {
       let marker = this.get(x, y);
 
       if (marker === src) {
-        console.log("door", x, y);
         this.set(x, y, dst);
         return this;
       }
@@ -286,13 +345,17 @@ export function createLevel(): Level {
   let builder = new Builder(21, 21)
     .fill(TileMarker.Wall)
     .diggers({
-      count: 10,
+      count: 5,
       iterations: 10,
-      spades: [0b010_111_010, 0b111_001_001],
+      spades: [0b000010000, 0b010010010],
+      symmetry: Symmetry.Vertical,
       turnChance: 0.01,
-      initialDirections: Direction.CARDINAL_DIRECTIONS,
-      turns: [Direction.rotateLeft90],
+      turns: [Direction.rotateLeft90]
     })
+    //.cellularAutomata({
+    //  iterations: 10,
+    //  rules: [[], [4, 5, 6, 7, 8]],
+    //})
     .swapOne(TileMarker.Floor, TileMarker.Exit)
 
   let level = builder.build(marker => {
