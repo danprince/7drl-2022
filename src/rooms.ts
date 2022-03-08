@@ -76,7 +76,7 @@ export class RoomBuilder {
   constructor(
     template: string,
     legend: Record<string, Omit<CellBuilder, "key">>,
-    options: Partial<RoomBuilderOptions>,
+    options: Partial<RoomBuilderOptions> = {},
   ) {
     let map = Array2D.fromString(template);
 
@@ -109,7 +109,6 @@ export class RoomBuilder {
     for (let tries = 0; tries < maxTries; tries++) {
       if (this.options.rotates) {
         if (RNG.chance(0.5)) {
-          console.log("rotate");
           this.cells = Array2D.rotateLeft90(this.cells);
         }
       }
@@ -156,7 +155,6 @@ export class RoomBuilder {
           entity.pos = Point.clone(pos);
           level.addEntity(entity);
           context.addEntity(cell.key!, entity);
-          console.log("cell spawn")
         }
       }
     }
@@ -224,6 +222,17 @@ export let JailCell = new RoomBuilder(`
     tile: Tiles.Floor,
     constraint: tile => tile.type.walkable,
   },
-}, {
-  rotates: true,
+});
+
+export let MountedBallista = new RoomBuilder(`
+...
+.B.
+...
+`, {
+  ".": {
+    constraint: tile => tile.type.walkable,
+  },
+  "B": {
+    spawn: () => new Entities.Ballista(),
+  },
 });

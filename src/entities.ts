@@ -930,3 +930,62 @@ export class Boulder extends Entity {
     };
   }
 }
+
+export class Ballista extends Entity {
+  name = "Ballista";
+  description = "";
+  glyph = Glyph("\xab", Colors.Orange);
+  pushable = true;
+
+  onPush(event: PushEvent): void {
+    game.level.addEffect(this.shoot(event.entity));
+  }
+
+  *shoot(shooter: Entity) {
+    let vec = Vector.fromPoints(shooter.pos, this.pos);
+    let pos = Point.clone(this.pos);
+    Vector.normalize(vec);
+
+    let boltDir = Direction.fromVector(vec);
+    let boltGlyph: Glyph;
+
+    switch (boltDir) {
+      case Direction.NORTH:
+      case Direction.SOUTH:
+        boltGlyph = Glyph("|", Colors.Orange);
+        break;
+      default:
+        boltGlyph = Glyph("-", Colors.Orange);
+        break;
+    }
+
+    let done = game.level.addFX(terminal => {
+      terminal.putGlyph(pos.x, pos.y, boltGlyph);
+    });
+
+    while (true) {
+      Point.translate(pos, vec);
+
+      let tile = game.level.getTile(pos.x, pos.y);
+      if (tile == null || !tile.type.walkable) break;
+
+      let entities = game.level.getEntitiesAt(pos.x, pos.y);
+      for (let entity of entities) {
+        let dmg = this.getBoltDamage();
+        shooter.attack(entity, dmg);
+      }
+
+      yield 1;
+    }
+
+    done();
+  }
+
+  getBoltDamage(): Damage {
+    return {
+      amount: 3,
+      type: DamageType.Misc,
+      knockback: true,
+    };
+  }
+}

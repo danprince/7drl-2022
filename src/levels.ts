@@ -220,6 +220,7 @@ export function createLevel(): Level {
   });
 
   Rooms.JailCell.tryToBuild(level);
+  Rooms.MountedBallista.tryToBuild(level);
 
   //for (let i = 0; i < 5; i++) {
   //  let entity = RNG.weighted<Entity>([
