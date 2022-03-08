@@ -32,7 +32,8 @@ export const Chars = {
   Fire: "\x19",
   Eye: "\x1a",
   Missile: "\x1b",
-  Grapple: "\x1e",
+  Grapple: "\x1c",
+  Time: "\x1d",
 
   // Entities
   Creature: "\x80",
@@ -70,6 +71,7 @@ export const Chars = {
   Block3: "\xc2",
   Blocks: ["\xc0", "\xc1", "\xc2"],
   Ripples: "\xc3",
+  Doorway: "\xc8",
   Cobbles: createCharSet(0xc4, 4),
   BoneWalls: createCharSet(0xd0, 11),
   BoxDrawing: createCharSet(0xe0, 16),
