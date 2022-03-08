@@ -1,4 +1,4 @@
-import { Direction } from "silmarils";
+import { Direction, Point, Vector } from "silmarils";
 import { Chars } from "./chars";
 import { Glyph } from "./terminal";
 
@@ -76,4 +76,9 @@ export function glyphToString(glyph: Glyph) {
   } else {
     return `{${glyph.fg}:${glyph.bg}}${glyph.char}{/}`;
   }
+}
+
+export function getDirectionBetween(p1: Point.Point, p2: Point.Point): Direction.Direction {
+  let vec = Vector.fromPoints(p1, p2);
+  return Direction.fromVector(vec);
 }

@@ -6,7 +6,7 @@ import fontUrl from "../font.png";
 import { loadImage } from "./helpers";
 import * as Levels from "./levels";
 import * as Handlers from "./handlers";
-import { Grapple } from "./abilities";
+import { Dart, Grapple } from "./abilities";
 
 declare global {
   const game: Game;
@@ -30,7 +30,7 @@ async function start() {
   game.setPlayer(player);
   game.setLevel(level);
 
-  game.player.setAbility(new Grapple());
+  game.player.setAbility(new Dart());
 
   // Setup global handlers
   game.handlers.push(new Handlers.MessageLogHandler);

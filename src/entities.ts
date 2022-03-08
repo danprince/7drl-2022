@@ -7,7 +7,7 @@ import * as Statuses from "./statuses";
 import * as Substances from "./substances";
 import * as Effects from "./effects";
 import { Chars } from "./chars";
-import { PushEvent } from "./events";
+import { PushEvent, TakeDamageEvent } from "./events";
 
 export abstract class MultiTurnEntity extends Entity {
   abstract takeMultiTurn(): Generator<number, boolean>;
@@ -904,8 +904,12 @@ export class Boulder extends Entity {
   onPush(event: PushEvent): void {
     let vec = Vector.fromPoints(event.entity.pos, this.pos);
     let dir = Direction.fromVector(vec);
-    game.log(this, "starts to roll...");
     this.pushedBy = event.entity;
+    this.push(dir);
+  }
+
+  push(dir: Direction.Direction) {
+    game.log(this, "starts to roll...");
     this.rollDirection = dir;
   }
 
@@ -987,5 +991,35 @@ export class Ballista extends Entity {
       type: DamageType.Misc,
       knockback: true,
     };
+  }
+}
+
+export class Chest extends Entity {
+  name = "Chest";
+  description = "";
+  glyph = Glyph(Chars.Chest, Colors.Blue);
+}
+
+export class Lever extends Entity {
+  name = "Lever";
+  description = "";
+  glyph = Glyph(Chars.LeverLeft, Colors.Blue);
+  pushable = true;
+  triggers: () => void = () => {};
+
+  onPush(): void {
+    this.flip();
+  }
+
+  onTakeDamage(): void {
+    this.flip();
+  }
+
+  flip() {
+    this.glyph.char = this.glyph.char === Chars.LeverLeft
+      ? Chars.LeverRight
+      : Chars.LeverLeft;
+
+    this.triggers();
   }
 }

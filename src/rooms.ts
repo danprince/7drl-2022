@@ -2,7 +2,9 @@ import { Array2D, Point, RNG } from "silmarils";
 import * as Entities from "./entities";
 import * as Tiles from "./tiles";
 import { Entity, Level, Substance, Tile, TileType } from "./game";
-import { assert } from "./helpers";
+import { assert, getDirectionBetween } from "./helpers";
+import { Chars } from "./chars";
+import { Colors } from "./ui";
 
 // Next steps
 // - Playtime event handlers
@@ -45,8 +47,8 @@ export class BuilderContext {
     (this.substancesByKey[key] = this.substancesByKey[key] || []).push(substance);
   }
 
-  findEntity(key: string) {
-    return this.entitiesByKey[key][0];
+  findEntity<T extends Entity>(key: string): T {
+    return this.entitiesByKey[key][0] as T;
   }
 
   findEntities(key: string) {
@@ -104,7 +106,7 @@ export class RoomBuilder {
   }
 
   tryToBuild(level: Level) {
-    const maxTries = 10;
+    const maxTries = 100;
 
     for (let tries = 0; tries < maxTries; tries++) {
       if (this.options.rotates) {
@@ -180,7 +182,7 @@ export let RollingBoulder = new RoomBuilder(`
 .@.
 .@.
 .@.
-.P.
+.L.
 `, {
   "O": {
     spawn: () => new Entities.Boulder,
@@ -189,12 +191,23 @@ export let RollingBoulder = new RoomBuilder(`
   "@": {
     tile: Tiles.Floor,
   },
-  "P": {
+  "L": {
     tile: Tiles.Floor,
     constraint: tile => tile.type.walkable,
+    spawn: () => new Entities.Lever(),
   },
 }, {
-  rotates: true
+  rotates: true,
+  afterBuild(ctx) {
+    let lever = ctx.findEntity<Entities.Lever>("L");
+    let boulder = ctx.findEntity<Entities.Boulder>("O");
+    lever.triggers = () => {
+      // Prevent triggering boulder twice
+      lever.triggers = () => {};
+      let dir = getDirectionBetween(boulder.pos, lever.pos);
+      boulder.push(dir);
+    };
+  }
 });
 
 export let JailCell = new RoomBuilder(`
@@ -234,5 +247,48 @@ export let MountedBallista = new RoomBuilder(`
   },
   "B": {
     spawn: () => new Entities.Ballista(),
+  },
+});
+
+export let SealedTreasureVault = new RoomBuilder(`
+.###.
+##$##
+.###.
+`, {
+  "#": {
+    tile: Tiles.Wall,
+  },
+  "$": {
+    tile: Tiles.Floor,
+    spawn: () => new Entities.Chest(),
+  },
+});
+
+export let GuardRoom = new RoomBuilder(`
+#########
+#....%..#
+#.%.....#
++....%..+
+#.%.....#
+#%%....%#
+####+####
+`, {
+  "#": {
+    tile: Tiles.Wall,
+  },
+  ".": {
+    tile: Tiles.Floor,
+  },
+  "%": {
+    spawn: () => {
+      let entity = new Entities.Chest();
+      entity.glyph.char = RNG.element(Chars.WoodenStuff);
+      entity.glyph.fg = RNG.element(Colors.Oranges);
+      return entity;
+    },
+  },
+  "+": {
+    tile: Tiles.Floor,
+    constraint: tile => tile.type.walkable,
   },
 });

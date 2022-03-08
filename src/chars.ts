@@ -66,7 +66,11 @@ export const Chars = {
   Tree1: "\x9e",
   Tree2: "\x9f",
   Trees: ["\x9e", "\x9f"],
+  LeverLeft: "\xad",
+  LeverRight: "\xae",
+  Chest: "\xaa",
   Boulder: "\xaf",
+  WoodenStuff: createCharSet(0xa4, 7),
 
   // Tiles
   Block1: "\xc0",
@@ -75,11 +79,12 @@ export const Chars = {
   Dot: "\xc4",
   Blocks: ["\xc0", "\xc1", "\xc2"],
   Ripples: "\xc3",
-  Bars: "\xdb",
-  Doorway: "\xdf",
+  Bars: "\xce",
+  Doorway: "\xcf",
   Diagonals: createCharSet(0xc8, 2),
   Cobbles: createCharSet(0xc4, 4),
   BoneWalls: createCharSet(0xd0, 11),
+  Flagstones: createCharSet(0xdb, 5),
   BoxDrawing: createCharSet(0xe0, 16),
   BrickWalls: createCharSet(0xf0, 16),
 }
