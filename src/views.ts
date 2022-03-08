@@ -1,4 +1,5 @@
 import { Direction, Point, Vector } from "silmarils";
+import { Chars } from "./chars";
 import { Game, PlayerAction } from "./game";
 import { delayAnimationFrame, directionToGridVector, getDirectionChar } from "./helpers";
 import { MessagesPanel, SidebarPanel, TopBarPanel, ViewportPanel } from "./panels";
@@ -9,7 +10,7 @@ export class GameView extends View {
   fps = 40;
 
   viewport = new ViewportPanel(2, 2, 21, 21);
-  messages = new MessagesPanel(this.viewport, 2, 23, 21, 10);
+  messages = new MessagesPanel(this.viewport, 2, 24, 21, 10);
   topBar = new TopBarPanel(2, 0, 21, 1);
   sideBar = new SidebarPanel(0, 2, 1, 21);
 
@@ -568,7 +569,7 @@ export class PaintingView extends View {
         }
       }
 
-      terminal.put(x, y, "\x7F", color, i);
+      terminal.put(x, y, Chars.Box, color, i);
     }
   }
 }

@@ -1,17 +1,15 @@
 import { DeathEvent, EventHandler, StatusAddedEvent, TakeDamageEvent } from "./events";
-import { glyphToString } from "./helpers";
-import { Chars } from "./chars";
 import { Colors } from "./ui";
 
 export class MessageLogHandler extends EventHandler {
   onTakeDamage(event: TakeDamageEvent): void {
     let { entity, dealer, damage } = event;
-    let _amount = `${Chars.Heart}{${Colors.Red}}${damage.amount}{/}`;
+    let _amount = `{${Colors.Red}}${damage.amount}{/}`;
 
     if (dealer) {
-      game.log(dealer, damage.type, "hit", entity, "for", _amount);
+      game.log(dealer, "hit", entity, "with", damage.type, "for", _amount);
     } else {
-      game.log(entity, "is", damage.type, "for", _amount);
+      game.log(entity, "loses", _amount, "to", damage.type);
     }
   }
 
@@ -31,7 +29,7 @@ export class MessageLogHandler extends EventHandler {
     if (isFinite(status.turns)) {
       game.log(entity, "is", status, `for ${status.turns} turns`);
     } else {
-      game.log(entity, "is", status);
+      game.log(entity, "is now", status);
     }
   }
 }
