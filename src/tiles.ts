@@ -34,6 +34,12 @@ export let Block = new TileType({
   },
 });
 
+export let IronBars = new TileType({
+  walkable: false,
+  diggable: false,
+  glyph: Glyph(Chars.Bars, Colors.Grey4),
+});
+
 export let Bones = new TileType({
   walkable: false,
   glyph: {

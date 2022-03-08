@@ -75,6 +75,7 @@ export const Chars = {
   Dot: "\xc4",
   Blocks: ["\xc0", "\xc1", "\xc2"],
   Ripples: "\xc3",
+  Bars: "\xdb",
   Doorway: "\xdf",
   Diagonals: createCharSet(0xc8, 2),
   Cobbles: createCharSet(0xc4, 4),

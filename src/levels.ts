@@ -2,6 +2,7 @@ import { Entity, Level, Tile, TileType } from "./game";
 import { assert } from "./helpers";
 import * as Tiles from "./tiles";
 import * as Entities from "./entities";
+import * as Rooms from "./rooms";
 import { Point, PRNG, RNG } from "silmarils";
 
 interface Key {
@@ -126,33 +127,6 @@ class Builder {
       let tile = new Tile(type);
       level.setTile(x, y, tile);
     }
-
-    for (let i = 0; i < 5; i++) {
-      let entity = PRNG.weighted<Entity>(this.rng, [
-        { weight: 1, value: new Entities.Mantleshell },
-        { weight: 1, value: new Entities.Wizard },
-        { weight: 1, value: new Entities.Thwomp },
-        { weight: 1, value: new Entities.Boulder },
-        { weight: 1, value: new Entities.Cultist },
-        { weight: 1, value: new Entities.Boar },
-        { weight: 1, value: new Entities.FossilKnight },
-        { weight: 1, value: new Entities.Frog },
-        { weight: 1, value: new Entities.Imp },
-        { weight: 1, value: new Entities.Krokodil },
-        { weight: 1, value: new Entities.Lizard },
-        { weight: 1, value: new Entities.Maguana },
-        { weight: 1, value: new Entities.Slimeshell },
-        { weight: 1, value: new Entities.Stoneshell },
-        { weight: 1, value: new Entities.Snake },
-        { weight: 1, value: new Entities.Ant },
-      ]);
-
-      let x = PRNG.int(this.rng, 0, this.width);
-      let y = PRNG.int(this.rng, 0, this.height);
-      entity.pos = { x, y };
-      level.addEntity(entity);
-    }
-
     return level;
   }
 
@@ -230,21 +204,48 @@ export function createTutorialLevel(): Level {
 }
 
 export function createLevel(): Level {
-  return new Builder(21, 21)
+  let builder = new Builder(21, 21)
     .caves(0.6, 10)
     .swapOne(TileMarker.Floor, TileMarker.Exit)
-    .build(marker => {
-      switch (marker) {
-        case TileMarker.Wall:
-          return Tiles.Wall;
-        case TileMarker.Exit:
-          return Tiles.Doorway;
-        case TileMarker.Floor:
-          if (RNG.chance(0.05)) {
-            return Tiles.Bones;
-          } else {
-            return Tiles.Floor;
-          }
-      }
-    });
+  
+  let level = builder.build(marker => {
+    switch (marker) {
+      case TileMarker.Wall:
+        return Tiles.Wall;
+      case TileMarker.Exit:
+        return Tiles.Doorway;
+      case TileMarker.Floor:
+        return Tiles.Floor;
+    }
+  });
+
+  Rooms.JailCell.tryToBuild(level);
+
+  //for (let i = 0; i < 5; i++) {
+  //  let entity = RNG.weighted<Entity>([
+  //    { weight: 1, value: new Entities.Mantleshell },
+  //    { weight: 1, value: new Entities.Wizard },
+  //    { weight: 1, value: new Entities.Thwomp },
+  //    { weight: 1, value: new Entities.Boulder },
+  //    { weight: 1, value: new Entities.Cultist },
+  //    { weight: 1, value: new Entities.Boar },
+  //    { weight: 1, value: new Entities.FossilKnight },
+  //    { weight: 1, value: new Entities.Frog },
+  //    { weight: 1, value: new Entities.Imp },
+  //    { weight: 1, value: new Entities.Krokodil },
+  //    { weight: 1, value: new Entities.Lizard },
+  //    { weight: 1, value: new Entities.Maguana },
+  //    { weight: 1, value: new Entities.Slimeshell },
+  //    { weight: 1, value: new Entities.Stoneshell },
+  //    { weight: 1, value: new Entities.Snake },
+  //    { weight: 1, value: new Entities.Ant },
+  //  ]);
+
+  //  let x = RNG.int(0, level.width);
+  //  let y = RNG.int(0, level.height);
+  //  entity.pos = { x, y };
+  //  level.addEntity(entity);
+  //}
+
+  return level;
 }
