@@ -1,9 +1,9 @@
-import { Entity, Level, Tile, TileType } from "./game";
-import { assert } from "./helpers";
+import { Level, Tile, TileType } from "./game";
+import { assert, directionToGridVector } from "./helpers";
 import * as Tiles from "./tiles";
 import * as Entities from "./entities";
 import * as Rooms from "./rooms";
-import { Point, PRNG, RNG } from "silmarils";
+import { Direction, Point, PRNG, RNG } from "silmarils";
 
 interface Key {
   [ch: string]: {
@@ -16,6 +16,13 @@ enum TileMarker {
   Floor,
   Wall,
   Exit,
+}
+
+interface DiggerOptions {
+  count: number;
+  iterations: number;
+  rotationChance: number;
+  spades: number[];
 }
 
 class Builder {
@@ -50,15 +57,86 @@ class Builder {
     }
   }
 
-  caves(openess: number = 0.55, iterations: number = 10) {
-    let outOfBoundsMarker = TileMarker.Wall;
+  fill(marker: TileMarker) {
+    this.map.fill(marker);
+    return this;
+  }
 
-    for (let { x, y } of this.cells()) {
-      if (PRNG.chance(this.rng, 1 - openess)) {
-        this.map[x + y * this.width] = TileMarker.Wall;
+  // TODO: Support different diggers using different kernels
+  // TODO: Export some interesting kernel shapes
+  // TODO: Symmetrical diggers
+  diggers({
+    count = 1,
+    iterations = 10,
+    spades = [0b000_010_000],
+    turnChance = 0.1,
+    turns = [Direction.rotateLeft45, Direction.rotateRight45],
+    initialDirections = Direction.DIRECTIONS,
+  }: {
+    count?: number;
+    iterations?: number;
+    spades?: number[];
+    turnChance?: number;
+    turns?: ((dir: Direction.Direction) => Direction.Direction)[];
+    initialDirections?: Direction.Direction[];
+  }) {
+    interface Digger {
+      dir: Direction.Direction,
+      pos: Point.Point,
+      spade: number,
+    }
+
+    let diggers: Digger[] = [];
+
+    for (let i = 0; i < count; i++) {
+      let x = RNG.int(0, this.width);
+      let y = RNG.int(0, this.height);
+      let pos = Point.from(x, y);
+      let dir = RNG.element(initialDirections);
+      let spade = RNG.element(spades);
+      diggers.push({ dir, pos, spade });
+    }
+
+    for (let i = 0; i < iterations; i++) {
+      for (let digger of diggers) {
+        let { x, y } = digger.pos;
+
+        let nw = digger.spade & 0b100_000_000;
+        let n  = digger.spade & 0b010_000_000;
+        let ne = digger.spade & 0b001_000_000;
+        let w  = digger.spade & 0b000_100_000;
+        let c  = digger.spade & 0b000_010_000;
+        let e  = digger.spade & 0b000_001_000;
+        let sw = digger.spade & 0b000_000_100;
+        let s  = digger.spade & 0b000_000_010;
+        let se = digger.spade & 0b000_000_001;
+
+        if (nw) this.set(x - 1, y - 1, TileMarker.Floor);
+        if (n)  this.set(x - 0, y - 1, TileMarker.Floor);
+        if (ne) this.set(x + 1, y - 1, TileMarker.Floor);
+        if (w)  this.set(x - 1, y - 0, TileMarker.Floor);
+        if (c)  this.set(x - 0, y - 0, TileMarker.Floor);
+        if (e)  this.set(x + 1, y - 0, TileMarker.Floor);
+        if (sw) this.set(x - 1, y + 1, TileMarker.Floor);
+        if (s)  this.set(x - 0, y + 1, TileMarker.Floor);
+        if (se) this.set(x + 1, y + 1, TileMarker.Floor);
+
+        let vec = directionToGridVector(digger.dir);
+        Point.translate(digger.pos, vec);
+
+        if (RNG.chance(turnChance)) {
+          let turn = RNG.element(turns);
+          digger.dir = turn(digger.dir);
+          console.log(turn, digger.dir)
+        }
       }
     }
 
+    return this;
+  }
+
+  caves(iterations: number = 10) {
+    let outOfBoundsMarker = TileMarker.Wall;
     // TODO: Extract CA logic
     for (let i = 0; i < iterations; i++) {
       let map: TileMarker[] = [];
@@ -89,11 +167,12 @@ class Builder {
     return this;
   }
 
-  openess() {
-    return (
-      this.map.filter(marker => marker === TileMarker.Floor).length /
-      this.map.length
-    );
+  noise(bias: number = 0.5) {
+    for (let { x, y } of this.cells()) {
+      if (PRNG.chance(this.rng, 1 - bias)) {
+        this.map[x + y * this.width] = TileMarker.Wall;
+      }
+    }
   }
 
   randomCell() {
@@ -205,9 +284,17 @@ export function createTutorialLevel(): Level {
 
 export function createLevel(): Level {
   let builder = new Builder(21, 21)
-    .caves(0.6, 10)
+    .fill(TileMarker.Wall)
+    .diggers({
+      count: 10,
+      iterations: 10,
+      spades: [0b010_111_010, 0b111_001_001],
+      turnChance: 0.01,
+      initialDirections: Direction.CARDINAL_DIRECTIONS,
+      turns: [Direction.rotateLeft90],
+    })
     .swapOne(TileMarker.Floor, TileMarker.Exit)
-  
+
   let level = builder.build(marker => {
     switch (marker) {
       case TileMarker.Wall:
@@ -219,34 +306,9 @@ export function createLevel(): Level {
     }
   });
 
-  Rooms.JailCell.tryToBuild(level);
-  Rooms.MountedBallista.tryToBuild(level);
+  //Rooms.GuardRoom.tryToBuild(level);
 
-  //for (let i = 0; i < 5; i++) {
-  //  let entity = RNG.weighted<Entity>([
-  //    { weight: 1, value: new Entities.Mantleshell },
-  //    { weight: 1, value: new Entities.Wizard },
-  //    { weight: 1, value: new Entities.Thwomp },
-  //    { weight: 1, value: new Entities.Boulder },
-  //    { weight: 1, value: new Entities.Cultist },
-  //    { weight: 1, value: new Entities.Boar },
-  //    { weight: 1, value: new Entities.FossilKnight },
-  //    { weight: 1, value: new Entities.Frog },
-  //    { weight: 1, value: new Entities.Imp },
-  //    { weight: 1, value: new Entities.Krokodil },
-  //    { weight: 1, value: new Entities.Lizard },
-  //    { weight: 1, value: new Entities.Maguana },
-  //    { weight: 1, value: new Entities.Slimeshell },
-  //    { weight: 1, value: new Entities.Stoneshell },
-  //    { weight: 1, value: new Entities.Snake },
-  //    { weight: 1, value: new Entities.Ant },
-  //  ]);
-
-  //  let x = RNG.int(0, level.width);
-  //  let y = RNG.int(0, level.height);
-  //  entity.pos = { x, y };
-  //  level.addEntity(entity);
-  //}
+  // TODO: Area specific decorations and ambient spawns
 
   return level;
 }
