@@ -1,6 +1,7 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
 import { Chars } from "./chars";
-import { DealDamageEvent, DeathEvent, dispatch, EventHandler, GameEvent, KillEvent, PushEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
+import { DealDamageEvent, DeathEvent, dispatch, EventHandler, GameEvent, KillEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
+import { directionToGridVector } from "./helpers";
 import { Glyph, Terminal } from "./terminal";
 import { Colors, UI } from "./ui";
 
@@ -32,6 +33,10 @@ export class Game extends EventHandler {
 
     for (let entity of entities) {
       if (entity.dead) continue;
+
+      if (entity === this.player) {
+        yield 0;
+      }
 
       await entity.update();
 
@@ -103,8 +108,14 @@ export class Level {
   }
 
   addEntity(entity: Entity) {
-    this.entities.push(entity);
+    if (entity instanceof Player) {
+      this.entities.unshift(entity);
+    } else {
+      this.entities.push(entity);
+    }
+
     entity.level = this;
+    SpawnEvent(entity);;
   }
 
   removeEntity(entity: Entity) {
@@ -273,6 +284,12 @@ export class DamageType {
     this.description = description;
   }
 
+  static Trap = new DamageType(
+    Glyph("*", Colors.Grey3),
+    "Trap",
+    ""
+  );
+
   static Melee = new DamageType(
     Glyph(Chars.Fist, Colors.Grey3),
     "Melee",
@@ -338,6 +355,10 @@ export abstract class Status extends EventHandler {
   onRemoved() {}
   onUpdate() {}
 
+  modifyGlyph(glyph: Glyph): Glyph {
+    return glyph;
+  }
+
   update() {
     this.turns -= 1;
     this.onUpdate();
@@ -357,8 +378,10 @@ export abstract class Entity extends EventHandler {
   hp?: Stat;
   speed = 0;
   energy = 0;
+  parent: Entity | undefined;
   pushable = false;
-  statusGlyph: Glyph | undefined;
+  intentGlyph: Glyph | undefined;
+  immunities: StatusType[] = [];
   statuses: Status[] = [];
   dead = false;
   heavy = false;
@@ -372,6 +395,16 @@ export abstract class Entity extends EventHandler {
 
   getTile() {
     return this.level.getTile(this.pos.x, this.pos.y);
+  }
+
+  getStatusGlyph() {
+    let glyph = this.glyph;
+
+    for (let status of this.statuses) {
+      glyph = status.modifyGlyph(glyph);
+    }
+
+    return glyph;
   }
 
   onEvent(event: GameEvent): void {
@@ -391,8 +424,14 @@ export abstract class Entity extends EventHandler {
     VestigeAddedEvent(this, vestige);
   }
 
-  addStatus(status: Status) {
-    let existing = this.getStatus(status.constructor as any);
+  addStatus(status: Status): boolean {
+    let type = status.constructor as StatusType;
+
+    if (this.immunities.includes(type)) {
+      return false;
+    }
+
+    let existing = this.getStatus(type);
 
     if (existing) {
       existing.turns += status.turns;
@@ -404,6 +443,7 @@ export abstract class Entity extends EventHandler {
     }
 
     StatusAddedEvent(this, status || existing);
+    return true;
   }
 
   removeStatus(status: Status) {
@@ -532,7 +572,7 @@ export abstract class Entity extends EventHandler {
   }
 
   moveIn(direction: Direction.Direction) {
-    let [dx, dy] = Direction.toVector(direction);
+    let [dx, dy] = directionToGridVector(direction);
     return this.moveBy(dx, dy);
   }
 

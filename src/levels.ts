@@ -1,12 +1,7 @@
-import { Game, Level, Player, Tile, TileType } from "./game";
+import { Entity, Level, Tile, TileType } from "./game";
 import { assert } from "./helpers";
 import * as Tiles from "./tiles";
 import * as Entities from "./entities";
-import * as Abilities from "./abilities";
-import * as Vestiges from "./vestiges";
-import * as Statuses from "./statuses";
-import * as Levels from "./levels";
-import * as Handlers from "./handlers";
 import { Point, PRNG, RNG } from "silmarils";
 
 interface Key {
@@ -99,6 +94,20 @@ class Builder {
       let type = mapper(mark);
       let tile = new Tile(type);
       level.setTile(x, y, tile);
+    }
+
+    for (let i = 0; i < 3; i++) {
+      let entity = PRNG.weighted<Entity>(this.rng, [
+        { weight: 1, value: new Entities.Mantleshell },
+        { weight: 1, value: new Entities.Wizard },
+        { weight: 1, value: new Entities.Thwomp },
+        { weight: 1, value: new Entities.Boulder },
+      ]);
+
+      let x = PRNG.int(this.rng, 0, this.width);
+      let y = PRNG.int(this.rng, 0, this.height);
+      entity.pos = { x, y };
+      level.addEntity(entity);
     }
 
     return level;

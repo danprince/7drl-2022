@@ -9,6 +9,125 @@ import * as Effects from "./effects";
 import { Chars } from "./chars";
 import { PushEvent } from "./events";
 
+export abstract class MultiTurnEntity extends Entity {
+  abstract takeMultiTurn(): Generator<number, boolean>;
+  private multiTurnIterator: Iterator<number, boolean> | undefined;
+  private skipTurnTimer: number | undefined;
+
+  takeTurn(): UpdateResult {
+    if (this.skipTurnTimer) {
+      this.skipTurnTimer -= 1;
+      return true;
+    }
+
+    if (!this.multiTurnIterator) {
+      this.multiTurnIterator = this.takeMultiTurn();
+    }
+
+    let result = this.multiTurnIterator.next();
+
+    if (result.done) {
+      this.multiTurnIterator = undefined;
+      return result.value;
+    }
+
+    if (result.value > 0) {
+      this.skipTurnTimer = result.value;
+    }
+
+    return true;
+  }
+}
+
+export class Wizard extends MultiTurnEntity {
+  name = "Wizard";
+  description = "";
+  glyph = Glyph(Chars.Wizard, Colors.Blue);
+  speed = Speeds.EveryTurn;
+  immunities = [Statuses.Frozen];
+  hp = Stat(10);
+
+  *takeMultiTurn() {
+    this.moveIn(RNG.element(Direction.CARDINAL_DIRECTIONS));
+    return true;
+  }
+
+  moveTo(x: number, y: number): boolean {
+    let tile = this.getTile();
+    tile?.setSubstance(new Substances.Ice());
+    return super.moveTo(x, y);
+  }
+}
+
+export class Thwomp extends Entity {
+  name = "Thwomp";
+  description = "Goes thwomp";
+  glyph = Glyph(Chars.Thwomp, Colors.Grey4);
+  speed = Speeds.EveryTurn;
+  hp = Stat(1);
+  triggerDirection: Direction.CardinalDirection | undefined;
+
+  getIntentGlyph(dir: Direction.CardinalDirection): Glyph {
+    switch (dir) {
+      case Direction.NORTH: return StatusGlyphs.North;
+      case Direction.EAST: return StatusGlyphs.East;
+      case Direction.WEST: return StatusGlyphs.West;
+      case Direction.SOUTH: return StatusGlyphs.South;
+    }
+  }
+
+  takeTurn(): UpdateResult {
+    if (this.triggerDirection) {
+      game.level.addEffect(this.thwomp(this.triggerDirection));
+      this.triggerDirection = undefined;
+      return true;
+    }
+
+    for (let dir of Direction.CARDINAL_DIRECTIONS) {
+      if (this.scan(dir)) {
+        this.triggerDirection = dir;
+        this.intentGlyph = this.getIntentGlyph(this.triggerDirection);
+        return true;
+      }
+    }
+
+    return true;
+  }
+
+  *thwomp(dir: Direction.CardinalDirection) {
+    this.intentGlyph = undefined;
+
+    while (true) {
+      let moved = this.moveIn(dir);
+      if (!moved) break;
+      yield 1;
+    }
+  }
+
+  getMeleeDamage(): Damage | null {
+    return {
+      type: DamageType.Trap,
+      knockback: true,
+      amount: 3,
+    };
+  }
+
+  scan(direction: Direction.CardinalDirection) {
+    let vec = Direction.toVector(direction);
+    let pos = Point.clone(this.pos);
+
+    for (let i = 0; i < 5; i++) {
+      Point.translate(pos, vec);
+      let tile = game.level.getTile(pos.x, pos.y);
+      if (tile == null || tile.type.walkable == false) return false;
+      let entities = game.level.getEntitiesAt(pos.x, pos.y);
+      if (entities.length > 0) return true;
+    }
+
+    return false;
+  }
+}
+
 export abstract class Snail extends Entity {
   speed = Speeds.Every2Turns;
   hp = { current: 1, max: 1 };
@@ -54,6 +173,7 @@ export class Mantleshell extends Snail {
   name = "Mantleshell";
   description = "";
   substanceType = Substances.Magma;
+  immunities = [Statuses.Molten];
   glyph = Glyph(Chars.Snail, Colors.Orange3);
 }
 
@@ -61,6 +181,7 @@ export class Slimeshell extends Snail {
   name = "Slimeshell";
   description = "";
   substanceType = Substances.Slime;
+  immunities = [Statuses.Poisoned];
   glyph = Glyph(Chars.Snail, Colors.Green);
 }
 
@@ -153,7 +274,7 @@ export class Boar extends Entity {
         if (canCharge) {
           this.chargeDirection = [sx, sy];
           this.status = "charging";
-          this.statusGlyph =
+          this.intentGlyph =
             sx < 0 ? StatusGlyphs.West :
             sx > 0 ? StatusGlyphs.East :
             sy > 0 ? StatusGlyphs.South :
@@ -808,16 +929,3 @@ export class Boulder extends Entity {
     };
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

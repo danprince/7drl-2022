@@ -1,15 +1,9 @@
-import { Point, RNG } from "silmarils";
-import { Game, Level, Player, Tile } from "./game";
+import { Game, Player } from "./game";
 import { UI } from "./ui";
 import { createFont } from "./terminal";
 import { GameView } from "./views";
 import fontUrl from "../font.png";
 import { loadImage } from "./helpers";
-import * as Tiles from "./tiles";
-import * as Entities from "./entities";
-import * as Abilities from "./abilities";
-import * as Vestiges from "./vestiges";
-import * as Statuses from "./statuses";
 import * as Levels from "./levels";
 import * as Handlers from "./handlers";
 

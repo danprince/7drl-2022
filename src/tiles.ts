@@ -6,7 +6,6 @@ import { Chars } from "./chars";
 export let Floor = new TileType({
   walkable: true,
   glyph: {
-    //char: ["."],
     char: Chars.Cobbles,
     fg: [Colors.Grey1],
   },
@@ -14,11 +13,9 @@ export let Floor = new TileType({
 
 export let Wall = new TileType({
   walkable: false,
-  //autotiling: AUTOTILING_WALL,
   glyph: {
-    //char: AUTOTILING_WALL,
     char: Chars.BoneWalls,
-    fg: [Colors.Grey2],
+    fg: [Colors.Grey3],
   },
 });
 
@@ -34,7 +31,7 @@ export let Bones = new TileType({
   walkable: false,
   glyph: {
     char: [Chars.Ribs, Chars.Bone],
-    fg: [Colors.Grey3, Colors.Grey2],
+    fg: Colors.Greys,
   },
 });
 

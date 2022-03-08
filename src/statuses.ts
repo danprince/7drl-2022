@@ -1,6 +1,6 @@
 import { Chars } from "./chars";
 import { DealDamageEvent, TakeDamageEvent } from "./events";
-import { DamageType, Player, Status } from "./game";
+import { DamageType, Status } from "./game";
 import { assert } from "./helpers";
 import { Glyph } from "./terminal";
 import { Colors } from "./ui";
@@ -11,12 +11,8 @@ export class Molten extends Status {
   glyph = Glyph(Chars.Diamond, Colors.Orange3);
   turns = Infinity;
 
-  onAdded(): void {
-    this.entity.statusGlyph = { ...this.entity.glyph, fg: Colors.Orange3 };
-  }
-
-  onRemoved(): void {
-    delete this.entity.statusGlyph;
+  modifyGlyph(glyph: Glyph): Glyph {
+    return { ...glyph, fg: Colors.Orange3 };
   }
 
   onDealDamage({ damage }: DealDamageEvent): void {
@@ -25,6 +21,17 @@ export class Molten extends Status {
 
   onTakeDamage({ damage }: TakeDamageEvent): void {
     damage.amount *= 2;
+  }
+}
+
+export class Frozen extends Status {
+  name = "Frozen";
+  description = "";
+  glyph = Glyph(Chars.Snowflake, Colors.Blue);
+  turns = 3;
+
+  modifyGlyph(glyph: Glyph): Glyph {
+    return { ...glyph, fg: Colors.Blue, bg: Colors.Blue1 };
   }
 }
 
@@ -38,12 +45,8 @@ export class Stunned extends Status {
     this.turns = turns;
   }
 
-  onAdded(): void {
-    this.entity.statusGlyph = { ...this.entity.glyph, bg: Colors.Blue1 };
-  }
-
-  onRemoved(): void {
-    delete this.entity.statusGlyph;
+  modifyGlyph(glyph: Glyph): Glyph {
+    return { ...glyph, bg: Colors.Blue1 };
   }
 
   update(): void {
@@ -62,12 +65,8 @@ export class Poisoned extends Status {
     this.turns = turns;
   }
 
-  onAdded(): void {
-    this.entity.statusGlyph = { ...this.entity.glyph, bg: Colors.Green1 };
-  }
-
-  onRemoved(): void {
-    delete this.entity.statusGlyph;
+  modifyGlyph(glyph: Glyph): Glyph {
+    return { ...glyph, bg: Colors.Green1 };
   }
 
   update(): void {

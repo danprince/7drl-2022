@@ -38,8 +38,15 @@ export class ViewportPanel extends Panel {
     let focusedEntity: Entity | undefined;
 
     for (let entity of game.level.entities) {
-      let glyph = entity.statusGlyph || entity.glyph;
-      terminal.put(entity.pos.x, entity.pos.y, glyph.char, glyph.fg, Colors.Black);
+      let glyph = entity.intentGlyph || entity.getStatusGlyph();
+
+      terminal.put(
+        entity.pos.x,
+        entity.pos.y,
+        glyph.char,
+        glyph.fg,
+        glyph.bg || Colors.Black
+      );
 
       if (terminal.isPointerOver(entity.pos.x, entity.pos.y)) {
         focusedEntity = entity;
@@ -59,7 +66,7 @@ export class ViewportPanel extends Panel {
     let text = "";
 
     if (entity.hp) {
-      text += `{31}\x03{1}${entity.hp.current}{/} `;
+      text += `{31}${Chars.Heart}{1}${entity.hp.current}{/} `;
     }
 
     text += entity.name;

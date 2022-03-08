@@ -14,10 +14,20 @@ export class Slime extends Substance {
 
 export class Magma extends Substance {
   defaultTimer = 5;
-  fg = Colors.Orange3;
+  fg = Colors.Orange2;
   bg = Colors.Red1;
   onEnter(entity: Entity): void {
     entity.addStatus(new Statuses.Molten());
+    this.tile.removeSubstance();
+  }
+}
+
+export class Ice extends Substance {
+  defaultTimer = 5;
+  fg = Colors.Blue;
+  bg = Colors.Blue2;
+  onEnter(entity: Entity): void {
+    entity.addStatus(new Statuses.Frozen());
     this.tile.removeSubstance();
   }
 }

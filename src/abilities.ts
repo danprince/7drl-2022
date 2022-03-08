@@ -3,7 +3,7 @@ import { Chars } from "./chars";
 import { MagmaBomb } from "./entities";
 import { Ability, Damage, DamageType, Effect, Entity, TargetingMode, Tile } from "./game";
 import { assert, directionToGridVector } from "./helpers";
-import { Hardened, Molten, Poisoned, Stunned } from "./statuses";
+import { Molten, Poisoned, Stunned } from "./statuses";
 import { Glyph } from "./terminal";
 import { Colors } from "./ui";
 

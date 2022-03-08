@@ -56,6 +56,17 @@ export function TakeDamageEvent(entity: Entity, damage: Damage, dealer?: Entity)
   dispatch(game, event);
 }
 
+export interface SpawnEvent extends BaseEvent {
+  type: "spawn";
+  entity: Entity;
+}
+
+export function SpawnEvent(entity: Entity) {
+  let event: SpawnEvent = { type: "spawn", entity };
+  dispatch(entity, event);
+  dispatch(game, event);
+}
+
 export interface DeathEvent extends BaseEvent {
   type: "death";
   entity: Entity;
@@ -135,6 +146,7 @@ export type GameEvent =
   | TileBumpEvent
   | DealDamageEvent
   | TakeDamageEvent
+  | SpawnEvent
   | DeathEvent
   | KillEvent
   | PushEvent
@@ -148,6 +160,7 @@ export class EventHandler {
   onTileBump(event: TileBumpEvent) {}
   onDealDamage(event: DealDamageEvent) {}
   onTakeDamage(event: TakeDamageEvent) {}
+  onSpawn(event: SpawnEvent) {}
   onDeath(event: DeathEvent) {}
   onKill(event: KillEvent) {}
   onPush(event: PushEvent) {}
@@ -164,6 +177,7 @@ export function dispatch(handler: EventHandler, event: GameEvent) {
     case "tile-bump": return handler.onTileBump?.(event);
     case "deal-damage": return handler.onDealDamage?.(event);
     case "take-damage": return handler.onTakeDamage?.(event);
+    case "spawn": return handler.onSpawn?.(event);
     case "death": return handler.onDeath?.(event);
     case "kill": return handler.onKill?.(event);
     case "status-added": return handler.onStatusAdded?.(event);
