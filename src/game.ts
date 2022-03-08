@@ -1,6 +1,6 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
 import { Chars } from "./chars";
-import { DealDamageEvent, DeathEvent, dispatch, EventHandler, GameEvent, KillEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
+import { DealDamageEvent, DeathEvent, dispatch, EventHandler, GameEvent, KillEvent, PushEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
 import { Glyph, Terminal } from "./terminal";
 import { Colors, UI } from "./ui";
 
@@ -357,6 +357,7 @@ export abstract class Entity extends EventHandler {
   hp?: Stat;
   speed = 0;
   energy = 0;
+  pushable = false;
   statusGlyph: Glyph | undefined;
   statuses: Status[] = [];
   dead = false;
@@ -578,19 +579,17 @@ export abstract class Entity extends EventHandler {
 
     if (entities.length) {
       for (let entity of entities) {
+        if (entity.pushable) {
+          PushEvent(this, entity);
+          continue;
+        }
+
         let damage = this.getMeleeDamage();
         if (damage == null) continue;
 
         let vec = Vector.fromPoints(this.pos, { x, y });
         Vector.normalize(vec);
         damage.direction = vec.map(Math.round) as Vector.Vector;
-
-        dispatch(this, {
-          type: "deal-damage",
-          entity: this,
-          damage,
-          target: entity,
-        });
 
         this.attack(entity, damage);
       }

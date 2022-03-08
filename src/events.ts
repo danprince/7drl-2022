@@ -82,6 +82,18 @@ export function KillEvent(entity: Entity, target: Entity, damage?: Damage) {
   dispatch(game, event);
 }
 
+export interface PushEvent extends BaseEvent {
+  type: "push";
+  entity: Entity;
+  target: Entity;
+}
+
+export function PushEvent(entity: Entity, target: Entity) {
+  let event: PushEvent = { type: "push", entity, target };
+  dispatch(target, event);
+  dispatch(game, event);
+}
+
 export interface StatusAddedEvent extends BaseEvent {
   type: "status-added";
   entity: Entity;
@@ -125,6 +137,7 @@ export type GameEvent =
   | TakeDamageEvent
   | DeathEvent
   | KillEvent
+  | PushEvent
   | StatusAddedEvent
   | StatusRemovedEvent
   | VestigeAddedEvent;
@@ -137,6 +150,7 @@ export class EventHandler {
   onTakeDamage(event: TakeDamageEvent) {}
   onDeath(event: DeathEvent) {}
   onKill(event: KillEvent) {}
+  onPush(event: PushEvent) {}
   onStatusAdded(event: StatusAddedEvent) {}
   onStatusRemoved(event: StatusRemovedEvent) {}
   onVestigeAdded(event: VestigeAddedEvent) {}
@@ -155,6 +169,7 @@ export function dispatch(handler: EventHandler, event: GameEvent) {
     case "status-added": return handler.onStatusAdded?.(event);
     case "status-removed": return handler.onStatusRemoved?.(event);
     case "vestige-added": return handler.onVestigeAdded?.(event);
+    case "push": return handler.onPush?.(event);
     default: console.error(`Invalid event`, event);
   }
 }

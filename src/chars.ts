@@ -62,6 +62,7 @@ export const Chars = {
   Tree1: "\x9e",
   Tree2: "\x9f",
   Trees: ["\x9e", "\x9f"],
+  Boulder: "\xaf",
 
   // Tiles
   Block1: "\xc0",

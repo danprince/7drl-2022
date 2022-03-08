@@ -7,6 +7,7 @@ import * as Statuses from "./statuses";
 import * as Substances from "./substances";
 import * as Effects from "./effects";
 import { Chars } from "./chars";
+import { PushEvent } from "./events";
 
 export abstract class Snail extends Entity {
   speed = Speeds.Every2Turns;
@@ -767,3 +768,56 @@ export class MagmaBomb extends Entity {
     return super.update();
   }
 }
+
+export class Boulder extends Entity {
+  name = "Boulder";
+  description = "";
+  pushable = true;
+  glyph = Glyph(Chars.Boulder, Colors.Grey3);
+  heavy = true;
+
+  rollDirection: Direction.Direction | undefined;
+  pushedBy: Entity | undefined;
+
+  onPush(event: PushEvent): void {
+    let vec = Vector.fromPoints(event.entity.pos, this.pos);
+    let dir = Direction.fromVector(vec);
+    game.log(this, "starts to roll...");
+    this.pushedBy = event.entity;
+    this.rollDirection = dir;
+  }
+
+  update() {
+    if (this.rollDirection) {
+      let [dx, dy] = Direction.toVector(this.rollDirection);
+      let moved = this.moveBy(dx, dy);
+      if (moved === false) {
+        this.rollDirection = undefined;
+      }
+    }
+
+    return super.update();
+  }
+
+  getMeleeDamage(): Damage | null {
+    return {
+      type: DamageType.Stone,
+      direction: Direction.toVector(this.rollDirection!),
+      knockback: true,
+      amount: 10,
+    };
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
