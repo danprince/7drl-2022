@@ -7,7 +7,7 @@ import * as Statuses from "./statuses";
 import * as Substances from "./substances";
 import * as Effects from "./effects";
 import { Chars } from "./chars";
-import { PushEvent, TakeDamageEvent } from "./events";
+import { PushEvent } from "./events";
 
 export abstract class MultiTurnEntity extends Entity {
   abstract takeMultiTurn(): Generator<number, boolean>;
@@ -564,6 +564,7 @@ export class FossilKnight extends Entity {
 export class Snake extends Entity {
   name = "Snake";
   description = "";
+  immunities = [Statuses.Poisoned];
   glyph = Glyph(Chars.Snake, Colors.Green);
   speed = Speeds.Every2Turns;
   hp = { current: 2, max: 2 };

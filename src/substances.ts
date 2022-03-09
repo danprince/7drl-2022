@@ -4,7 +4,7 @@ import * as Statuses from "./statuses";
 
 export class Slime extends Substance {
   defaultTimer = 5;
-  fg = Colors.Green;
+  fg = Colors.Green2;
   bg = Colors.Green1;
   onEnter(entity: Entity): void {
     entity.addStatus(new Statuses.Poisoned(2));

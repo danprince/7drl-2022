@@ -2,11 +2,15 @@ import { Game, Player } from "./game";
 import { UI } from "./ui";
 import { createFont } from "./terminal";
 import { GameView } from "./views";
-import fontUrl from "../font.png";
 import { loadImage } from "./helpers";
+import { LevelBuilder } from "./builders";
+import fontUrl from "../font.png";
 import * as Levels from "./levels";
 import * as Handlers from "./handlers";
-import { Dart, Grapple } from "./abilities";
+import * as Abilities from "./abilities";
+import * as Rooms from "./rooms";
+
+// TODO: Unsure about this still
 
 declare global {
   const game: Game;
@@ -25,12 +29,14 @@ async function preload() {
 }
 
 async function start() {
-  let level = Levels.createLevel();
+  LevelBuilder.registerRoomBuilders(Rooms);
+  let level = LevelBuilder.build(Levels.PrimordialCaverns);
+  console.log(level);
   let player = new Player();
   game.setPlayer(player);
   game.setLevel(level);
 
-  game.player.setAbility(new Dart());
+  game.player.setAbility(new Abilities.Dart());
 
   // Setup global handlers
   game.handlers.push(new Handlers.MessageLogHandler);

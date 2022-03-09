@@ -4,6 +4,7 @@ import { DealDamageEvent, DeathEvent, DespawnEvent, EventHandler, GameEvent, Kil
 import { directionToGridVector } from "./helpers";
 import { Glyph, Terminal } from "./terminal";
 import { Colors, UI } from "./ui";
+import type { LevelBuilder } from "./builders";
 
 const ENERGY_REQUIRED_PER_TURN = 12;
 
@@ -18,6 +19,10 @@ export class Game extends EventHandler {
   handlers: EventHandler[] = [];
 
   onEvent(event: GameEvent): void {
+    if (this.level) {
+      event.sendTo(this.level);
+    }
+
     for (let handler of this.handlers) {
       event.sendTo(handler);
     }
@@ -77,7 +82,49 @@ export type Effect = Generator<number, void>;
 
 export type FX = (terminal: Terminal) => void;
 
-export class Level {
+type EntityType = Constructor<Entity>;
+
+export class LevelType extends EventHandler {
+  name: string;
+  floorTiles: TileType[];
+  wallTiles: TileType[];
+  commonEntities: EntityType[];
+  uncommonEntities: EntityType[];
+  rareEntities: EntityType[];
+  build: (levelBuilder: LevelBuilder) => Level;
+
+  constructor({
+    name,
+    floorTiles,
+    wallTiles,
+    commonEntities = [],
+    uncommonEntities = [],
+    rareEntities = [],
+    build,
+    ...events
+  }: Partial<EventHandler> & {
+    name: string;
+    floorTiles: TileType[];
+    wallTiles: TileType[];
+    commonEntities: EntityType[];
+    uncommonEntities: EntityType[];
+    rareEntities: EntityType[];
+    build: (levelBuilder: LevelBuilder) => Level;
+  }) {
+    super();
+    Object.assign(this, events);
+    this.name = name;
+    this.floorTiles = floorTiles;
+    this.wallTiles = wallTiles;
+    this.commonEntities = commonEntities;
+    this.uncommonEntities = uncommonEntities;
+    this.rareEntities = rareEntities;
+    this.build = build;
+  }
+}
+
+export class Level extends EventHandler {
+  type: LevelType;
   width: number;
   height: number;
   entities: Entity[] = [];
@@ -85,9 +132,15 @@ export class Level {
   fx: FX[] = [];
   effects: Effect[] = [];
 
-  constructor(width: number, height: number) {
+  constructor(type: LevelType, width: number, height: number) {
+    super();
+    this.type = type;
     this.width = width;
     this.height = height;
+  }
+
+  onEvent(event: GameEvent): void {
+    event.sendTo(this.type);
   }
 
   addFX(fx: FX) {
@@ -782,8 +835,18 @@ export abstract class Substance extends EventHandler {
   tile: Tile = undefined!;
   timer: number = 0;
 
+  constructor(timer?: number) {
+    super();
+
+    if (timer) {
+      this.timer = timer;
+    }
+  }
+
   init() {
-    this.timer = this.defaultTimer;
+    if (this.timer === 0) {
+      this.timer = this.defaultTimer;
+    }
   }
 
   update() {

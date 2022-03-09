@@ -1,12 +1,13 @@
 import { RNG } from "silmarils";
-import { Player, TileType, Vestige } from "./game";
+import { TileType } from "./game";
 import { Molten } from "./statuses";
 import { Colors } from "./ui";
 import { Chars } from "./chars";
 import { Glyph } from "./terminal";
-import { createLevel } from "./levels";
 import * as Vestiges from "./vestiges";
 import * as Abilities from "./abilities";
+import * as Levels from "./levels";
+import { LevelBuilder } from "./builders";
 
 export let Floor = new TileType({
   walkable: true,
@@ -53,6 +54,7 @@ export let Doorway = new TileType({
   glyph: Glyph(Chars.Doorway, Colors.Grey4),
 });
 
+// TODO: Move this logic out of tiles.ts
 function getAllRewards() {
   return [
     new Vestiges.Alchemical,
@@ -93,7 +95,7 @@ function getPossibleRewards() {
 
 Doorway.onTileEnter = event => {
   if (event.entity === game.player) {
-    let level = createLevel();
+    let level = LevelBuilder.build(Levels.PrimordialCaverns);
 
     // Pick a random ability for the next level
     let ability = getRandomAbility();
