@@ -9,7 +9,7 @@ export let PrimordialCaverns = new LevelType({
   characteristics: {
     defaultFloorTile: Tiles.Floor,
     defaultWallTile: Tiles.Wall,
-    commonEntityTypes: [Entities.Stoneshell],
+    commonEntityTypes: [Entities.Stoneshell, Entities.Skeleton],
     uncommonEntityTypes: [Entities.Boar],
     rareEntityTypes: [Entities.FossilKnight],
     decorativeEntityTypes: [Entities.MushroomBolete],
@@ -23,6 +23,9 @@ export let PrimordialCaverns = new LevelType({
         rules: [[5, 6, 7, 8], [3, 4, 5, 6, 7, 8]],
         outOfBoundsMarker: TileMarker.Wall,
       })
-      .build();
+      .build({
+        minAccessibleTilesPercent: 0.4,
+        minCriticalPathLength: 30,
+      });
   },
 });

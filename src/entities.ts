@@ -1045,3 +1045,21 @@ export class MushroomDeceiver extends Entity {
   description = "";
   glyph = Glyph(Chars.Mushroom2, Colors.Pink);
 }
+
+export class Skeleton extends Entity {
+  name = "Skeleton";
+  description = "";
+  glyph = Glyph(Chars.Skeleton, Colors.White);
+  speed = Speeds.Every2Turns;
+  hp = Stat(2);
+
+  private direction: Direction.CardinalDirection = Direction.WEST;
+
+  takeTurn(): UpdateResult {
+    if (!this.moveIn(this.direction)) {
+      this.direction = Direction.rotate180(this.direction);
+    }
+
+    return true;
+  }
+}

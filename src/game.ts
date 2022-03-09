@@ -1,7 +1,7 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
 import { Chars } from "./chars";
 import { DealDamageEvent, DeathEvent, DespawnEvent, EventHandler, GameEvent, InteractEvent, KillEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
-import { dijkstra, directionToGridVector } from "./helpers";
+import { Constructor, dijkstra, directionToGridVector, OneOrMore } from "./helpers";
 import { Glyph, Terminal } from "./terminal";
 import { Colors, UI } from "./ui";
 import type { LevelBuilder } from "./builders";
@@ -79,9 +79,7 @@ export type Effect = Generator<number, void>;
 
 export type FX = (terminal: Terminal) => void;
 
-type OneOrMore<T> = [item: T, ...items: T[]];
-
-interface LevelCharacteristics {
+export interface LevelCharacteristics {
   defaultFloorTile: TileType;
   defaultWallTile: TileType;
   commonEntityTypes: OneOrMore<Constructor<Entity>>;
@@ -447,7 +445,6 @@ export abstract class Status extends EventHandler {
   }
 }
 
-export type Constructor<T> = { new(...args: any[]): T };
 export type StatusType = Constructor<Status>;
 
 export function Stat(current: number, max: number = current): Stat {

@@ -2,6 +2,9 @@ import { Array2D, Direction, Point, Vector } from "silmarils";
 import { Chars } from "./chars";
 import { Glyph } from "./terminal";
 
+export type Constructor<T> = { new(...args: any[]): T };
+export type OneOrMore<T> = [item: T, ...items: T[]];
+
 export function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     let image = new Image();

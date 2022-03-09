@@ -54,6 +54,9 @@ export const Chars = {
   Golem: "\x8d",
   Wizard: "\x8e",
   Thwomp: "\x8f",
+  Skeleton: "\x93",
+
+  // Props
   Portal1: "\x97",
   Portal2: "\x98",
   Portal3: "\x99",

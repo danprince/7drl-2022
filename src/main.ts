@@ -1,3 +1,4 @@
+import { RNG } from "silmarils";
 import { Game, Player } from "./game";
 import { UI } from "./ui";
 import { createFont } from "./terminal";
@@ -26,6 +27,13 @@ async function preload() {
 
 async function start() {
   registerRoomBuilders(Rooms);
+
+  // Setup seed
+  let seed = Date.now();
+  //seed = 1646855411481;
+  console.log("seed:", seed);
+  RNG.seed(seed);
+  LevelBuilder.setSeed(seed);
 
   let game = window.game = new Game();
   let level = LevelBuilder.build(Levels.PrimordialCaverns);
