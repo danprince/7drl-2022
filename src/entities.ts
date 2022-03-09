@@ -900,6 +900,7 @@ export class Boulder extends Entity {
   glyph = Glyph(Chars.Boulder, Colors.Grey3);
   heavy = true;
 
+  hasBeenPushed = false;
   rollDirection: Direction.Direction | undefined;
   pushedBy: Entity | undefined;
 
@@ -913,6 +914,7 @@ export class Boulder extends Entity {
   push(dir: Direction.Direction) {
     game.log(this, "starts to roll...");
     this.rollDirection = dir;
+    this.hasBeenPushed = true;
   }
 
   update() {

@@ -9,6 +9,7 @@ import * as Levels from "./levels";
 import * as Substances from "./substances";
 
 export let RollingBoulder = new RoomBuilder("rolling-boulder", `
+,,,
 .O.
 .@.
 .@.
@@ -21,6 +22,9 @@ export let RollingBoulder = new RoomBuilder("rolling-boulder", `
     "O": {
       spawn: () => new Entities.Boulder,
       tile: Tiles.Floor,
+    },
+    ",": {
+      constraint: tile => tile.type.walkable,
     },
     "@": {
       tile: Tiles.Floor,
@@ -35,10 +39,12 @@ export let RollingBoulder = new RoomBuilder("rolling-boulder", `
     let lever = ctx.findEntity<Entities.Lever>("L");
     let boulder = ctx.findEntity<Entities.Boulder>("O");
     lever.triggers = () => {
-      // Prevent triggering boulder twice
-      lever.triggers = () => {};
-      let dir = getDirectionBetween(boulder.pos, lever.pos);
-      boulder.push(dir);
+      if (!boulder.hasBeenPushed) {
+        let dir = getDirectionBetween(boulder.pos, lever.pos);
+        boulder.push(dir);
+      } else {
+        game.log("Nothing happens");
+      }
     };
   }
 });
