@@ -33,6 +33,7 @@ export class Game extends EventHandler {
     this.level.autotile();
     this.player.pos = Point.clone(level.entrance);
     this.level.addEntity(this.player);
+    game.log(this.level.type.name);
   }
 
   setPlayer(player: Player) {
@@ -78,43 +79,36 @@ export type Effect = Generator<number, void>;
 
 export type FX = (terminal: Terminal) => void;
 
-type EntityType = Constructor<Entity>;
+type OneOrMore<T> = [item: T, ...items: T[]];
+
+interface LevelCharacteristics {
+  defaultFloorTile: TileType;
+  defaultWallTile: TileType;
+  commonEntityTypes: OneOrMore<Constructor<Entity>>;
+  uncommonEntityTypes: OneOrMore<Constructor<Entity>>;
+  rareEntityTypes: OneOrMore<Constructor<Entity>>;
+  decorativeEntityTypes: OneOrMore<Constructor<Entity>>;
+}
 
 export class LevelType extends EventHandler {
   name: string;
-  floorTiles: TileType[];
-  wallTiles: TileType[];
-  commonEntities: EntityType[];
-  uncommonEntities: EntityType[];
-  rareEntities: EntityType[];
+  characteristics: LevelCharacteristics;
   build: (levelBuilder: LevelBuilder) => Level;
 
   constructor({
     name,
-    floorTiles,
-    wallTiles,
-    commonEntities = [],
-    uncommonEntities = [],
-    rareEntities = [],
     build,
+    characteristics,
     ...events
   }: Partial<EventHandler> & {
     name: string;
-    floorTiles: TileType[];
-    wallTiles: TileType[];
-    commonEntities: EntityType[];
-    uncommonEntities: EntityType[];
-    rareEntities: EntityType[];
+    characteristics: LevelCharacteristics,
     build: (levelBuilder: LevelBuilder) => Level;
   }) {
     super();
     Object.assign(this, events);
     this.name = name;
-    this.floorTiles = floorTiles;
-    this.wallTiles = wallTiles;
-    this.commonEntities = commonEntities;
-    this.uncommonEntities = uncommonEntities;
-    this.rareEntities = rareEntities;
+    this.characteristics = characteristics;
     this.build = build;
   }
 }

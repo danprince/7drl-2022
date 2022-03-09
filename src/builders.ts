@@ -1,41 +1,16 @@
 import { Array2D, Point, RNG, PRNG, Direction } from "silmarils";
 import { Entity, Level, LevelType, Substance, Tile, TileType } from "./game";
 import { assert, directionToGridVector } from "./helpers";
+import * as Legend from "./legend";
 import * as Tiles from "./tiles";
 
-// Quality tests to ensure that it's possible to get from the spawn
-// to at least one exit.
+export const CHANCE_UNCOMMON = 0.25;
+export const CHANCE_RARE = 0.05;
 
-// TODO: Default legend for room builders?
-
-// Next steps
-// - Playtime event handlers
-// - Prevent rooms from overlapping other rooms?
-//
-// Should builders be abstract?
-// Probably want to say "reward" rather than chest and let some
-// other stage of the engine figure out what to put there.
-//
-// What about rooms that are hardcoded though?
-
-export type TileConstraint = (tile: Tile) => boolean;
-
-export type CreateTile =
-  | TileType
-  | (() => Tile);
-
-export type CreateEntity =
-  | (() => Entity);
-
-export type CreateSubstance =
-  | (() => Substance);
-
-export interface CellBuilder {
-  key?: string;
-  tile?: CreateTile;
-  spawn?: CreateEntity;
-  constraint?: TileConstraint;
-  substance?: CreateSubstance;
+export enum Rarity {
+  Common = "common",
+  Uncommon = "uncommon",
+  Rare = "rare",
 }
 
 export class ConstraintError extends Error {}
@@ -70,28 +45,19 @@ export class RoomBuilderContext {
   }
 }
 
-export enum Rarity {
-  Common = "common",
-  Uncommon = "uncommon",
-  Rare = "rare",
-}
-
-const CHANCE_UNCOMMON = 0.25;
-const CHANCE_RARE = 0.05;
-
 export interface RoomBuilderOptions {
   rotates: boolean;
   rarity: Rarity;
   cost: number;
   levelTypes: LevelType[];
-  legend: Record<string, Omit<CellBuilder, "key">>;
+  legend: Legend.Legend;
 
   afterBuild(context: RoomBuilderContext): void;
 }
 
 export class RoomBuilder {
   id: string;
-  cells: Array2D.Array2D<CellBuilder>;
+  cells: Array2D.Array2D<Legend.CellBuilder>;
 
   options: RoomBuilderOptions = {
     rotates: true,
@@ -111,9 +77,14 @@ export class RoomBuilder {
     this.options = { ...this.options, ...options };
 
     let map = Array2D.fromString(template);
-    this.cells = Array2D.map(map, (char) => {
-      let { legend } = this.options;
-      return { key: char, ...legend[char] };
+
+    this.cells = Array2D.map(map, key => {
+      let entry = (
+        this.options.legend[key] ||
+        Legend.defaultLegend[key]
+      );
+
+      return { key, ...entry };
     });
   }
 
@@ -127,8 +98,9 @@ export class RoomBuilder {
         let cell = Array2D.get(this.cells, x, y)!;
         let tile = level.getTile(origin.x + x, origin.y + y);
         if (tile == null) continue;
-        let pass = cell.constraint ? cell.constraint(tile) : true;
-        if (!pass) return false;
+        if (cell.constraint && !cell.constraint(tile, level)) {
+          return false;
+        }
       }
     }
 
@@ -158,7 +130,12 @@ export class RoomBuilder {
       // Check whether we'd be building over any restricted cells (e.g. exit tiles)
       for (let x = origin.x; x < this.cells.width; x++) {
         for (let y = origin.y; y < this.cells.height; y++) {
-          if (isRestricted(x, y)) {
+          let cell = Array2D.get(this.cells, x, y);
+
+          // Don't check restrictions unless we're sure this tile will build
+          let willBuild = cell && (cell.spawn || cell.substance || cell.tile);
+
+          if (willBuild && isRestricted(x, y)) {
             console.log("violated tile restrictions", this.id);
             continue;
           }
@@ -187,14 +164,15 @@ export class RoomBuilder {
         let cell = Array2D.get(this.cells, x, y)!;
 
         if (cell.tile) {
-          let tile = this.buildTile(cell.tile);
-          tile.pos = Point.clone(pos);
+          let tile = cell.tile instanceof TileType
+            ? new Tile(cell.tile)
+            : new Tile(cell.tile(level));
           level.setTile(pos.x, pos.y, tile);
           context.addTile(cell.key!, tile);
         }
 
         if (cell.substance) {
-          let substance = cell.substance();
+          let substance = cell.substance(level);
           let tile = level.getTile(pos.x, pos.y);
           assert(tile, "no tile for substance");
           tile.setSubstance(substance);
@@ -202,7 +180,7 @@ export class RoomBuilder {
         }
 
         if (cell.spawn) {
-          let entity = cell.spawn();
+          let entity = cell.spawn(level);
           entity.pos = Point.clone(pos);
           level.addEntity(entity);
           context.addEntity(cell.key!, entity);
@@ -211,18 +189,6 @@ export class RoomBuilder {
     }
 
     this.options.afterBuild(context);
-  }
-
-  buildTile(tiler: CreateTile) {
-    if (tiler instanceof TileType) {
-      return new Tile(tiler);
-    } else {
-      return tiler();
-    }
-  }
-
-  buildEntity(spawner: CreateEntity) {
-    return spawner();
   }
 }
 
@@ -537,7 +503,6 @@ export class LevelBuilder {
 
   createEntrance() {
     this.entrance = this.randomCellByType(TileMarker.Floor);
-    console.log(this.entrance);
     return this;
   }
 
@@ -548,9 +513,7 @@ export class LevelBuilder {
     return this;
   }
 
-  build(
-    mapper: (marker: TileMarker) => TileType
-  ): Level {
+  build(): Level {
     let level = new Level(this.levelType, this.width, this.height);
 
     let restrictedCells = new Set<number>();
@@ -573,7 +536,9 @@ export class LevelBuilder {
     // Convert the tile markers into actual tiles
     for (let { x, y } of this.cells()) {
       let mark = this.get(x, y)!;
-      let type = mapper(mark);
+      let type = mark === TileMarker.Wall
+        ? level.type.characteristics.defaultWallTile
+        : level.type.characteristics.defaultFloorTile;
       let tile = new Tile(type);
       level.setTile(x, y, tile);
     }
@@ -606,9 +571,10 @@ export class LevelBuilder {
 
       if (built) {
         budget -= roomBuilder.options.cost;
-        console.log("placed", roomBuilder.id);
-      } else {
-        console.log("failed to place", roomBuilder.id);
+      }
+
+      if (rarity === Rarity.Common) {
+        roomBuilderQueue.push(roomBuilder);
       }
 
       if (budget < 10) {
