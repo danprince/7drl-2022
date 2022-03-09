@@ -22,6 +22,7 @@ export class EventHandler {
   onDeath(event: DeathEvent) {}
   onKill(event: KillEvent) {}
   onPush(event: PushEvent) {}
+  onInteract(event: InteractEvent) {}
   onStatusAdded(event: StatusAddedEvent) {}
   onStatusRemoved(event: StatusRemovedEvent) {}
   onVestigeAdded(event: VestigeAddedEvent) {}
@@ -227,6 +228,24 @@ export class PushEvent extends GameEvent {
 
   invoke(handler: EventHandler) {
     return handler.onPush(this);
+  }
+
+  dispatch() {
+    this.sendTo(this.target);
+    this.sendTo(game);
+  }
+}
+
+export class InteractEvent extends GameEvent {
+  constructor(
+    readonly entity: Entity,
+    readonly target: Entity,
+  ) {
+    super();
+  }
+
+  invoke(handler: EventHandler) {
+    return handler.onInteract(this);
   }
 
   dispatch() {

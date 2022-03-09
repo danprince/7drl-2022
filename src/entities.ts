@@ -5,9 +5,10 @@ import { Glyph } from "./terminal";
 import { Colors } from "./ui";
 import * as Statuses from "./statuses";
 import * as Substances from "./substances";
+import * as Vestiges from "./vestiges";
 import * as Effects from "./effects";
 import { Chars } from "./chars";
-import { PushEvent } from "./events";
+import { InteractEvent, PushEvent } from "./events";
 
 export abstract class MultiTurnEntity extends Entity {
   abstract takeMultiTurn(): Generator<number, boolean>;
@@ -999,6 +1000,12 @@ export class Chest extends Entity {
   name = "Chest";
   description = "";
   glyph = Glyph(Chars.Chest, Colors.Blue);
+  interactive = true;
+  onInteract(event: InteractEvent): void {
+    let vestigeType = RNG.element(Object.values(Vestiges));
+    game.player.addVestige(new vestigeType);
+    this.despawn();
+  }
 }
 
 export class Lever extends Entity {
