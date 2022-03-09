@@ -87,6 +87,7 @@ export interface DijkstraMap {
   costSoFar: Array2D.Array2D<number>;
   cameFrom: Array2D.Array2D<Point.Point | undefined>;
   pathTo(point: Point.Point): Point.Point[];
+  distanceTo(point: Point.Point): number;
 }
 
 type DijkstraCost<T> = (current: T, next: T) => number;
@@ -142,9 +143,14 @@ export function dijkstra(
     }
   }
 
+  function distanceTo(point: Point.Point): number {
+    return Array2D.get(costSoFar, point.x, point.y)!;
+  }
+
   return {
     costSoFar,
     cameFrom,
     pathTo,
+    distanceTo,
   };
 }
