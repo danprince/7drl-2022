@@ -1033,3 +1033,15 @@ export class Lever extends Entity {
     this.triggers();
   }
 }
+
+export class MushroomBolete extends Entity {
+  name = "Bolete";
+  description = "";
+  glyph = Glyph(Chars.Mushroom1, Colors.Orange2);
+}
+
+export class MushroomDeceiver extends Entity {
+  name = "Deceiver";
+  description = "";
+  glyph = Glyph(Chars.Mushroom2, Colors.Pink);
+}

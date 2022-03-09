@@ -1,12 +1,10 @@
-import { RNG } from "silmarils";
 import { Rarity, RoomBuilder } from "./builders";
-import { Chars } from "./chars";
 import { getDirectionBetween } from "./helpers";
-import { Colors } from "./ui";
 import * as Entities from "./entities";
 import * as Tiles from "./tiles";
 import * as Levels from "./levels";
 import * as Substances from "./substances";
+import { RNG } from "silmarils";
 
 export let RollingBoulder = new RoomBuilder("rolling-boulder", `
 ,,,
@@ -191,3 +189,35 @@ export let OpenVault = new RoomBuilder("open-vault", `
   },
 });
 
+export let MushroomCave = new RoomBuilder("mushroom-cave", `
+#%%%%%#
+##.m.##
+#m.m.m#
+##..m##
+###.###
+**.+.**
+`, {
+  rarity: Rarity.Uncommon,
+  legend: {
+    "+": {
+      constraint: tile => tile.type.walkable,
+    },
+    ".": {
+      tile: Tiles.Floor,
+    },
+    "#": {
+      tile: Tiles.Wall,
+    },
+    "%": {
+      tile: Tiles.Wall,
+      constraint: tile => !tile.type.walkable,
+    },
+    "m": {
+      tile: Tiles.Floor,
+      spawn: () => RNG.item(
+        new Entities.MushroomBolete(),
+        new Entities.MushroomDeceiver(),
+      ),
+    },
+  },
+});

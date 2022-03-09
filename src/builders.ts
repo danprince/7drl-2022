@@ -118,40 +118,61 @@ export class RoomBuilder {
   }
 
   checkConstraints(level: Level, origin: Point.Point): boolean {
+    // TODO: Need some way for a tile constraint to require that it is accessible
+    // from a certain point etc
+
     // TODO: Silmarils needs an iterator for array 2d
     for (let x = 0; x < this.cells.width; x++) {
       for (let y = 0; y < this.cells.height; y++) {
         let cell = Array2D.get(this.cells, x, y)!;
         let tile = level.getTile(origin.x + x, origin.y + y);
-
-        if (cell.constraint && tile && cell.constraint(tile) === false) {
-          return false;
-        }
+        if (tile == null) continue;
+        let pass = cell.constraint ? cell.constraint(tile) : true;
+        if (!pass) return false;
       }
     }
 
     return true;
   }
 
-  tryToBuild(level: Level) {
+  tryToBuild(
+    level: Level,
+    isRestricted: (x: number, y: number) => boolean
+  ) {
     const maxTries = 100;
 
     for (let tries = 0; tries < maxTries; tries++) {
+      // Orientation doesn't matter for some room builders
       if (this.options.rotates) {
         if (RNG.chance(0.5)) {
           this.cells = Array2D.rotateLeft90(this.cells);
         }
       }
 
+      // Pick a random point to be the top left of the template
       let origin = Point.from(
         RNG.int(0, level.width - this.cells.width),
         RNG.int(0, level.height - this.cells.height)
       );
 
-      if (this.checkConstraints(level, origin)) {
-        this.build(level, origin);
-        return true;
+      // Check whether we'd be building over any restricted cells (e.g. exit tiles)
+      for (let x = origin.x; x < this.cells.width; x++) {
+        for (let y = origin.y; y < this.cells.height; y++) {
+          if (isRestricted(x, y)) {
+            console.log("violated tile restrictions", this.id);
+            continue;
+          }
+        }
       }
+
+      // Check whether the template would violate any tile constraints
+      if (this.checkConstraints(level, origin) === false) {
+        console.log("constraints check failed", this.id);
+        continue;
+      }
+
+      this.build(level, origin);
+      return true;
     }
 
     return false;
@@ -237,7 +258,7 @@ export function getRoomBuildersByType(levelType: LevelType) {
 export class LevelBuilder {
   static build(levelType: LevelType, width = 21, height = 21): Level {
     for (let tries = 0; tries < 100; tries++) {
-      console.group("Build", levelType.name);
+      console.groupCollapsed("Build", levelType.name);
       let builder = new LevelBuilder(levelType, width, height);
 
       try {
@@ -262,7 +283,7 @@ export class LevelBuilder {
   map: TileMarker[] = [];
   width: number;
   height: number;
-  entrance: Point.Point | undefined;
+  entrance: Point.Point = { x: -1, y: - 1};
   exits: Point.Point[] = [];
 
   constructor(levelType: LevelType, width: number, height: number) {
@@ -532,9 +553,24 @@ export class LevelBuilder {
   ): Level {
     let level = new Level(this.levelType, this.width, this.height);
 
+    let restrictedCells = new Set<number>();
+
+    const restrict = (x: number, y: number) =>
+      restrictedCells.add(x + y * this.width);
+
+    const isRestricted = (x: number, y: number) =>
+      restrictedCells.has(x + y * this.width);
+
     level.entrance = this.entrance;
     level.exits = this.exits;
 
+    // Prevent building over the entrances/exits
+    restrict(level.entrance.x, level.entrance.y);
+    level.exits.forEach(({ x, y }) => restrict(x, y));
+
+    // TODO: Restrict all tiles on the shortest path from entrance to exit?
+
+    // Convert the tile markers into actual tiles
     for (let { x, y } of this.cells()) {
       let mark = this.get(x, y)!;
       let type = mapper(mark);
@@ -542,14 +578,13 @@ export class LevelBuilder {
       level.setTile(x, y, tile);
     }
 
+    // Create a queue of rooms that we can build in this level type
     let roomBuilderQueue = getRoomBuildersByType(this.levelType);
 
     // Prevent room selection bias
     RNG.shuffle(roomBuilderQueue);
 
     let budget = RNG.int(50, 150);
-
-    // TODO: Should probably never place a room if it overlaps entrances/exits
 
     while (roomBuilderQueue.length) {
       let roomBuilder = roomBuilderQueue.shift()!;
@@ -567,7 +602,7 @@ export class LevelBuilder {
         continue;
       }
 
-      let built = roomBuilder.tryToBuild(level);
+      let built = roomBuilder.tryToBuild(level, isRestricted);
 
       if (built) {
         budget -= roomBuilder.options.cost;
