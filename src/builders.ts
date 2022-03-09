@@ -1,6 +1,7 @@
 import { Array2D, Point, RNG, PRNG, Direction } from "silmarils";
+import { ExitLevelEvent } from "./events";
 import { Entity, Level, LevelType, Substance, Tile, TileType } from "./game";
-import { assert, directionToGridVector } from "./helpers";
+import { assert, dijkstra, directionToGridVector, maxBy, minBy, PointSet } from "./helpers";
 import * as Legend from "./legend";
 import * as Tiles from "./tiles";
 
@@ -109,11 +110,11 @@ export class RoomBuilder {
 
   tryToBuild(
     level: Level,
-    isRestricted: (x: number, y: number) => boolean
+    finalised: PointSet,
   ) {
     const maxTries = 100;
 
-    for (let tries = 0; tries < maxTries; tries++) {
+    retry: for (let tries = 0; tries < maxTries; tries++) {
       // Orientation doesn't matter for some room builders
       if (this.options.rotates) {
         if (RNG.chance(0.5)) {
@@ -127,17 +128,18 @@ export class RoomBuilder {
         RNG.int(0, level.height - this.cells.height)
       );
 
-      // Check whether we'd be building over any restricted cells (e.g. exit tiles)
+      // Check whether we'd be building over any finalised cells (e.g. exit tiles)
       for (let x = origin.x; x < this.cells.width; x++) {
         for (let y = origin.y; y < this.cells.height; y++) {
+          let pos = Point.from(x, y);
           let cell = Array2D.get(this.cells, x, y);
 
-          // Don't check restrictions unless we're sure this tile will build
+          // Check whether the cell will actually build anything here
           let willBuild = cell && (cell.spawn || cell.substance || cell.tile);
 
-          if (willBuild && isRestricted(x, y)) {
+          if (willBuild && finalised.has(pos)) {
             console.log("violated tile restrictions", this.id);
-            continue;
+            continue retry;
           }
         }
       }
@@ -148,20 +150,24 @@ export class RoomBuilder {
         continue;
       }
 
-      this.build(level, origin);
+      this.build(level, origin, finalised);
       return true;
     }
 
     return false;
   }
 
-  build(level: Level, origin: Point.Point) {
+  build(level: Level, origin: Point.Point, finalised: PointSet) {
     let context = new RoomBuilderContext();
 
     for (let x = 0; x < this.cells.width; x++) {
       for (let y = 0; y < this.cells.height; y++) {
         let pos = Point.translated(origin, [x, y]);
         let cell = Array2D.get(this.cells, x, y)!;
+
+        if (cell.tile || cell.substance || cell.spawn) {
+          finalised.add(pos);
+        }
 
         if (cell.tile) {
           let tile = cell.tile instanceof TileType
@@ -249,8 +255,6 @@ export class LevelBuilder {
   map: TileMarker[] = [];
   width: number;
   height: number;
-  entrance: Point.Point = { x: -1, y: - 1};
-  exits: Point.Point[] = [];
 
   constructor(levelType: LevelType, width: number, height: number) {
     this.levelType = levelType;
@@ -258,12 +262,12 @@ export class LevelBuilder {
     this.width = width;
     this.height = height;
 
-    for (let { x, y } of this.cells()) {
+    for (let { x, y } of this.points()) {
       this.map[x + y * width] = TileMarker.Floor;
     }
   }
 
-  private *cells() {
+  private *points() {
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
         yield Point.from(x, y);
@@ -425,7 +429,7 @@ export class LevelBuilder {
     for (let i = 0; i < iterations; i++) {
       let map: TileMarker[] = [];
 
-      for (let { x, y } of this.cells()) {
+      for (let { x, y } of this.points()) {
         let tile = this.get(x, y);
         if (tile == null) continue;
 
@@ -473,7 +477,7 @@ export class LevelBuilder {
   }
 
   noise(bias: number = 0.5) {
-    for (let { x, y } of this.cells()) {
+    for (let { x, y } of this.points()) {
       this.map[x + y * this.width] = PRNG.chance(this.rng, bias)
         ? TileMarker.Wall
         : TileMarker.Floor;
@@ -501,40 +505,58 @@ export class LevelBuilder {
     throw new ConstraintError("Could not find marker. Ran out of tries");
   }
 
-  createEntrance() {
-    this.entrance = this.randomCellByType(TileMarker.Floor);
-    return this;
+  private getDijkstraMap(start: Point.Point) {
+    return dijkstra(
+      this.width,
+      this.height,
+      start,
+      (_, next) => this.get(next.x, next.y) === TileMarker.Floor ? 1 : Infinity,
+      Point.vonNeumannNeighbours,
+    );
   }
 
-  createExit() {
-    // TODO: Parameterise to put exits far away from entrances?
-    let exit = this.randomCellByType(TileMarker.Floor);
-    this.exits.push(exit);
-    return this;
+  private findOpenCenter(): Point.Point {
+    let points = Array.from(this.points());
+
+    return minBy(points, ({ x, y }) => {
+      let marker = this.get(x, y);
+      if (marker !== TileMarker.Floor) return Infinity;
+      let cx = Math.ceil(x - this.width / 2);
+      let cy = Math.ceil(y - this.height / 2);
+      return Math.abs(cx) + Math.abs(cy);
+    });
+  }
+
+  findEntranceAndExit() {
+    let center = this.findOpenCenter();
+    let centerMap = this.getDijkstraMap(center);
+    let points = Array.from(this.points());
+    let entrance = maxBy(points, pos => centerMap.finiteDistanceTo(pos));
+    let entranceMap = this.getDijkstraMap(entrance);
+    let exit = maxBy(points, pos => entranceMap.finiteDistanceTo(pos));
+
+    return {
+      entrance,
+      exit,
+    }
   }
 
   build(): Level {
     let level = new Level(this.levelType, this.width, this.height);
+    let finalised = new PointSet();
 
-    let restrictedCells = new Set<number>();
-
-    const restrict = (x: number, y: number) =>
-      restrictedCells.add(x + y * this.width);
-
-    const isRestricted = (x: number, y: number) =>
-      restrictedCells.has(x + y * this.width);
-
-    level.entrance = this.entrance;
-    level.exits = this.exits;
+    let { entrance, exit } = this.findEntranceAndExit();
+    level.entrance = entrance;
+    level.exit = exit;
 
     // Prevent building over the entrances/exits
-    restrict(level.entrance.x, level.entrance.y);
-    level.exits.forEach(({ x, y }) => restrict(x, y));
+    finalised.add(level.entrance);
+    finalised.add(level.exit);
 
     // TODO: Restrict all tiles on the shortest path from entrance to exit?
 
     // Convert the tile markers into actual tiles
-    for (let { x, y } of this.cells()) {
+    for (let { x, y } of this.points()) {
       let mark = this.get(x, y)!;
       let type = mark === TileMarker.Wall
         ? level.type.characteristics.defaultWallTile
@@ -567,7 +589,7 @@ export class LevelBuilder {
         continue;
       }
 
-      let built = roomBuilder.tryToBuild(level, isRestricted);
+      let built = roomBuilder.tryToBuild(level, finalised);
 
       if (built) {
         budget -= roomBuilder.options.cost;
@@ -589,28 +611,22 @@ export class LevelBuilder {
     }
 
     let map = level.getDijkstraMap(level.entrance);
+    let path = map.pathTo(level.exit);
 
-    let accessibleExits = level.exits.filter(exit => {
-      let path = map.pathTo(exit);
-      return path.length > 0;
-    });
-
-    if (accessibleExits.length === 0) {
-      throw new ConstraintError("No accessible exits");
+    if (path.length === 0) {
+      throw new ConstraintError("Exit is not accessible");
     }
 
-    for (let exit of accessibleExits) {
-      let door = new Tile(Tiles.Doorway);
+    let door = new Tile(Tiles.Doorway);
 
-      door.onEnter = entity => {
-        if (entity === game.player) {
-          let level = LevelBuilder.build(this.levelType);
-          game.setLevel(level);
-        }
-      };
+    door.onEnter = entity => {
+      if (entity === game.player) {
+        let level = LevelBuilder.build(this.levelType);
+        game.setLevel(level);
+      }
+    };
 
-      level.setTile(exit.x, exit.y, door);
-    }
+    level.setTile(level.exit.x, level.exit.y, door);
 
     return level;
   }

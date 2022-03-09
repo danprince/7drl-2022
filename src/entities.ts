@@ -8,7 +8,7 @@ import * as Substances from "./substances";
 import * as Vestiges from "./vestiges";
 import * as Effects from "./effects";
 import { Chars } from "./chars";
-import { InteractEvent, PushEvent } from "./events";
+import { InteractEvent, PushEvent, TakeDamageEvent } from "./events";
 
 export abstract class MultiTurnEntity extends Entity {
   abstract takeMultiTurn(): Generator<number, boolean>;
@@ -1015,22 +1015,22 @@ export class Lever extends Entity {
   description = "";
   glyph = Glyph(Chars.LeverLeft, Colors.Blue);
   pushable = true;
-  triggers: () => void = () => {};
+  triggers: (pusher: Entity) => void = () => {};
 
-  onPush(): void {
-    this.flip();
+  onPush(event: PushEvent): void {
+    this.flip(event.entity);
   }
 
-  onTakeDamage(): void {
-    this.flip();
+  onTakeDamage(event: TakeDamageEvent): void {
+    this.flip(event.entity);
   }
 
-  flip() {
+  flip(pusher: Entity) {
     this.glyph.char = this.glyph.char === Chars.LeverLeft
       ? Chars.LeverRight
       : Chars.LeverLeft;
 
-    this.triggers();
+    this.triggers(pusher);
   }
 }
 

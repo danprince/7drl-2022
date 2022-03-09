@@ -81,6 +81,7 @@ export const Chars = {
   Ripples: "\xc3",
   Bars: "\xce",
   Doorway: "\xcf",
+  Stalagmite: "\xdb",
   Diagonals: createCharSet(0xc8, 2),
   Cobbles: createCharSet(0xc4, 4),
   BoneWalls: createCharSet(0xd0, 11),

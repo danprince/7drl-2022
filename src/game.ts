@@ -88,6 +88,7 @@ interface LevelCharacteristics {
   uncommonEntityTypes: OneOrMore<Constructor<Entity>>;
   rareEntityTypes: OneOrMore<Constructor<Entity>>;
   decorativeEntityTypes: OneOrMore<Constructor<Entity>>;
+  obstacleTiles: OneOrMore<TileType>;
 }
 
 export class LevelType extends EventHandler {
@@ -122,7 +123,7 @@ export class Level extends EventHandler {
   fx: FX[] = [];
   effects: Effect[] = [];
   entrance: Point.Point = { x: -1, y: -1 };
-  exits: Point.Point[] = [];
+  exit: Point.Point = { x: -1, y: -1 };
 
   constructor(type: LevelType, width: number, height: number) {
     super();

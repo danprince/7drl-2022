@@ -12,6 +12,14 @@ export let Floor = new TileType({
   },
 });
 
+export let Grass = new TileType({
+  walkable: true,
+  glyph: {
+    char: ["\xc5"],
+    fg: Colors.Greens,
+  },
+});
+
 export let Wall = new TileType({
   walkable: false,
   diggable: true,
@@ -27,6 +35,15 @@ export let Block = new TileType({
   glyph: {
     char: Chars.Blocks,
     fg: [Colors.Grey2],
+  },
+});
+
+export let Stalagmite = new TileType({
+  walkable: false,
+  diggable: true,
+  glyph: {
+    char: [Chars.Stalagmite],
+    fg: [Colors.Grey2, Colors.Grey3],
   },
 });
 

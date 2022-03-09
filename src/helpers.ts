@@ -88,6 +88,7 @@ export interface DijkstraMap {
   cameFrom: Array2D.Array2D<Point.Point | undefined>;
   pathTo(point: Point.Point): Point.Point[];
   distanceTo(point: Point.Point): number;
+  finiteDistanceTo(point: Point.Point): number;
 }
 
 type DijkstraCost<T> = (current: T, next: T) => number;
@@ -147,10 +148,65 @@ export function dijkstra(
     return Array2D.get(costSoFar, point.x, point.y)!;
   }
 
+  function finiteDistanceTo(point: Point.Point): number {
+    let distance = distanceTo(point);
+    return isFinite(distance) ? distance : 0;
+  }
+
   return {
     costSoFar,
     cameFrom,
     pathTo,
     distanceTo,
+    finiteDistanceTo,
   };
+}
+
+export class PointSet {
+  private set = new Set<`${number}:${number}`>();
+
+  add({ x, y }: Point.Point): this {
+    this.set.add(`${x}:${y}`);
+    return this;
+  }
+
+  has({ x, y }: Point.Point): boolean {
+    return this.set.has(`${x}:${y}`);
+  }
+
+  delete({ x, y }: Point.Point): boolean {
+    return this.set.delete(`${x}:${y}`);
+  }
+}
+
+export function maxBy<T>(items: T[], getScore: (item: T) => number): T {
+  let best = items[0];
+  let max = -Infinity;
+
+  for (let item of items) {
+    let score = getScore(item);
+
+    if (score > max) {
+      max = score;
+      best = item;
+    }
+  }
+
+  return best;
+}
+
+export function minBy<T>(items: T[], getScore: (item: T) => number): T {
+  let best = items[0];
+  let min = Infinity;
+
+  for (let item of items) {
+    let score = getScore(item);
+
+    if (score < min) {
+      min = score;
+      best = item;
+    }
+  }
+
+  return best;
 }

@@ -20,11 +20,11 @@ export let RollingBoulder = new RoomBuilder("rolling-boulder", `
   afterBuild(ctx) {
     let lever = ctx.findEntity<Entities.Lever>("L");
     let boulder = ctx.findEntity<Entities.Boulder>("O");
-    lever.triggers = () => {
+    lever.triggers = pusher => {
       if (!boulder.hasBeenPushed) {
         let dir = getDirectionBetween(boulder.pos, lever.pos);
         boulder.push(dir);
-      } else {
+      } else if (pusher === game.player) {
         game.log("Nothing happens");
       }
     };
@@ -91,13 +91,13 @@ export let SnakePit = new RoomBuilder("snake-pit", `
 });
 
 export let Monolith = new RoomBuilder("monolith", `
-.........
-....#....
-...###...
-..#####..
-...###...
-....#....
-.........
+**...**
+*..#..*
+..###..
+.#####.
+..###..
+*..#..*
+**...**
 `, {
   rarity: Rarity.Common,
 });
@@ -115,10 +115,10 @@ export let OpenVault = new RoomBuilder("open-vault", `
 
 export let MushroomCave = new RoomBuilder("mushroom-cave", `
 #%%%%%#
-##.m.##
-#m.m.m#
+##"m.##
+#m.o"m#
 ##..m##
-###.###
+###"###
 **.+.**
 `, {
   rarity: Rarity.Uncommon,

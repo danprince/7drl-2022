@@ -33,6 +33,9 @@ export const getDefaultFloor: CreateTile = level =>
 export const getDefaultWall: CreateTile = level =>
   level.type.characteristics.defaultWallTile;
 
+export const getOrganicFloor: CreateTile = level =>
+  RNG.item(Tiles.Grass);
+
 export const isWalkable: TileConstraint = tile =>
   tile.type.walkable;
 
@@ -53,10 +56,16 @@ export const getRandomEntity: CreateEntity = level =>
   RNG.chance(0.25) ? getUncommonEntity(level) :
   getCommonEntity(level);
 
+export const getObstacleTile: CreateTile = level =>
+  RNG.element(level.type.characteristics.obstacleTiles);
+
 export const defaultLegend: Legend = {
   "*": {},
   ".": {
     tile: getDefaultFloor,
+  },
+  '"': {
+    tile: getOrganicFloor,
   },
   "+": {
     constraint: isWalkable,
@@ -103,7 +112,7 @@ export const defaultLegend: Legend = {
     spawn: () => new Entities.Boulder(),
   },
   "o": {
-    // TODO: Small boulder
+    tile: getObstacleTile,
   },
   "P": {
     // TODO: Pressure plate
