@@ -3,7 +3,7 @@ import { UI } from "./ui";
 import { createFont } from "./terminal";
 import { GameView } from "./views";
 import { loadImage } from "./helpers";
-import { LevelBuilder } from "./builders";
+import { LevelBuilder, registerRoomBuilders } from "./builders";
 import fontUrl from "../font.png";
 import * as Levels from "./levels";
 import * as Handlers from "./handlers";
@@ -29,9 +29,8 @@ async function preload() {
 }
 
 async function start() {
-  LevelBuilder.registerRoomBuilders(Rooms);
+  registerRoomBuilders(Rooms);
   let level = LevelBuilder.build(Levels.PrimordialCaverns);
-  console.log(level);
   let player = new Player();
   game.setPlayer(player);
   game.setLevel(level);

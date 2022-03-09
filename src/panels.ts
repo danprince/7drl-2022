@@ -1,3 +1,4 @@
+import { Array2D } from "silmarils";
 import { Chars } from "./chars";
 import { DamageType, Entity, Status, Tile } from "./game";
 import { glyphToString } from "./helpers";
@@ -6,6 +7,8 @@ import { Panel, singleLineLength, Terminal } from "./terminal";
 import { Colors } from "./ui";
 
 export class ViewportPanel extends Panel {
+  dijkstraMapsEnabled = false;
+
   put(terminal: Terminal, x: number, y: number, ch: string, fg: number, bg?: number) {
     terminal.put(
       x + this.bounds.x - terminal.bounds.x,
@@ -59,6 +62,37 @@ export class ViewportPanel extends Panel {
 
     if (focusedEntity) {
       this.drawEntityPopup(terminal, focusedEntity);
+    }
+
+    if (this.dijkstraMapsEnabled) {
+      this.drawDijkstraMaps(terminal);
+    }
+
+    if (terminal.isKeyDown("Alt")) {
+      let pointer = terminal.getRelativePointerPosition();
+      let path = game.level.findShortestPath(game.player.pos, pointer);
+
+      for (let cell of path) {
+        terminal.put(cell.x, cell.y, "+", Colors.Green);
+      }
+    }
+  }
+
+  drawDijkstraMaps(terminal: Terminal) {
+    let map = game.level.getDijkstraMap(game.player.pos);
+    let scale = [Colors.Blue, Colors.Green, Colors.Orange, Colors.Red];
+
+    for (let y = 0; y < game.level.height; y++) {
+      for (let x = 0; x < game.level.width; x++) {
+        let cost = Array2D.get(map.costSoFar, x, y)!;
+
+        if (isFinite(cost)) {
+          let digit = String(cost % 10);
+          let tens = Math.floor(cost / 10);
+          let fg = scale[tens] || Colors.Pink;
+          terminal.put(x, y, digit, fg);
+        }
+      }
     }
   }
 

@@ -1,4 +1,4 @@
-import { Direction, Point, Vector } from "silmarils";
+import { Array2D, Direction, Point, Vector } from "silmarils";
 import { Chars } from "./chars";
 import { Glyph } from "./terminal";
 
@@ -81,4 +81,70 @@ export function glyphToString(glyph: Glyph) {
 export function getDirectionBetween(p1: Point.Point, p2: Point.Point): Direction.Direction {
   let vec = Vector.fromPoints(p1, p2);
   return Direction.fromVector(vec);
+}
+
+export interface DijkstraMap {
+  costSoFar: Array2D.Array2D<number>;
+  cameFrom: Array2D.Array2D<Point.Point | undefined>;
+  pathTo(point: Point.Point): Point.Point[];
+}
+
+type DijkstraCost<T> = (current: T, next: T) => number;
+type DijkstraNeighbours<T> = (current: T) => T[];
+
+export function dijkstra(
+  width: number,
+  height: number,
+  start: Point.Point,
+  getCost: DijkstraCost<Point.Point>,
+  getNeighbours: DijkstraNeighbours<Point.Point> = Point.vonNeumannNeighbours,
+): DijkstraMap {
+  let { get, set, create } = Array2D;
+  let frontier: Point.Point[] = [start];
+  let costSoFar = create<number>(width, height, Infinity);
+  let cameFrom = create<Point.Point | undefined>(width, height);
+  set(costSoFar, start.x, start.y, 0);
+
+  while (frontier.length) {
+    let current = frontier.pop()!;
+
+    for (let next of getNeighbours(current)) {
+      if (next.x < 0 || next.y < 0 || next.x >= width || next.y >= height) {
+        continue;
+      }
+
+      let currentCost = get(costSoFar, current.x, current.y)!;
+      let extraCost = getCost(current, next);
+      let newCost = currentCost + extraCost;
+      let nextCost = get(costSoFar, next.x, next.y)!;
+
+      if (newCost < nextCost) {
+        set(costSoFar, next.x, next.y, newCost);
+        set(cameFrom, next.x, next.y, current);
+        frontier.push(next);
+      }
+    }
+  }
+
+  function pathTo(end: Point.Point): Point.Point[] {
+    let path: Point.Point[] = [];
+    let prev: Point.Point | undefined = end;
+
+    while (prev) {
+      path.unshift(Point.clone(prev));
+      prev = Array2D.get(cameFrom, prev.x, prev.y);
+    }
+
+    if (path.length === 1) {
+      return [];
+    } else {
+      return path;
+    }
+  }
+
+  return {
+    costSoFar,
+    cameFrom,
+    pathTo,
+  };
 }

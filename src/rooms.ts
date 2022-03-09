@@ -1,5 +1,5 @@
 import { RNG } from "silmarils";
-import { RoomBuilder } from "./builders";
+import { Rarity, RoomBuilder } from "./builders";
 import { Chars } from "./chars";
 import { getDirectionBetween } from "./helpers";
 import { Colors } from "./ui";
@@ -8,28 +8,29 @@ import * as Tiles from "./tiles";
 import * as Levels from "./levels";
 import * as Substances from "./substances";
 
-export let RollingBoulder = new RoomBuilder(`
+export let RollingBoulder = new RoomBuilder("rolling-boulder", `
 .O.
 .@.
 .@.
 .@.
 .L.
 `, {
-  "O": {
-    spawn: () => new Entities.Boulder,
-    tile: Tiles.Floor,
-  },
-  "@": {
-    tile: Tiles.Floor,
-  },
-  "L": {
-    tile: Tiles.Floor,
-    constraint: tile => tile.type.walkable,
-    spawn: () => new Entities.Lever(),
-  },
-}, {
   levelTypes: [Levels.PrimordialCaverns],
-  rotates: true,
+  rarity: Rarity.Uncommon,
+  legend: {
+    "O": {
+      spawn: () => new Entities.Boulder,
+      tile: Tiles.Floor,
+    },
+    "@": {
+      tile: Tiles.Floor,
+    },
+    "L": {
+      tile: Tiles.Floor,
+      constraint: tile => tile.type.walkable,
+      spawn: () => new Entities.Lever(),
+    },
+  },
   afterBuild(ctx) {
     let lever = ctx.findEntity<Entities.Lever>("L");
     let boulder = ctx.findEntity<Entities.Boulder>("O");
@@ -42,90 +43,69 @@ export let RollingBoulder = new RoomBuilder(`
   }
 });
 
-export let JailCell = new RoomBuilder(`
+export let JailCell = new RoomBuilder("jail-cell", `
 *%%%*
 #...#
 #...#
 ##=##
 **-**
 `, {
-  "=": {
-    tile: Tiles.IronBars,
-    constraint: tile => tile.type.walkable,
-  },
-  "#": {
-    tile: Tiles.Wall,
-  },
-  "%": {
-    tile: Tiles.Wall,
-    constraint: tile => tile.type === Tiles.Wall,
-  },
-  ".": {
-    tile: Tiles.Floor,
-  },
-  "-": {
-    tile: Tiles.Floor,
-    constraint: tile => tile.type.walkable,
+  legend: {
+    "=": {
+      tile: Tiles.IronBars,
+      constraint: tile => tile.type.walkable,
+    },
+    "#": {
+      tile: Tiles.Wall,
+    },
+    "%": {
+      tile: Tiles.Wall,
+      constraint: tile => tile.type === Tiles.Wall,
+    },
+    ".": {
+      tile: Tiles.Floor,
+    },
+    "-": {
+      tile: Tiles.Floor,
+      constraint: tile => tile.type.walkable,
+    },
   },
 });
 
-export let MountedBallista = new RoomBuilder(`
+export let MountedBallista = new RoomBuilder("mounted-ballista", `
 ...
 .B.
 ...
 `, {
-  ".": {
-    constraint: tile => tile.type.walkable,
-  },
-  "B": {
-    spawn: () => new Entities.Ballista(),
+  rarity: Rarity.Rare,
+  legend: {
+    ".": {
+      constraint: tile => tile.type.walkable,
+    },
+    "B": {
+      spawn: () => new Entities.Ballista(),
+    },
   },
 });
 
-export let SealedTreasureVault = new RoomBuilder(`
+export let SealedVault = new RoomBuilder("sealed-vault", `
 .###.
 ##$##
 .###.
 `, {
-  "#": {
-    tile: Tiles.Wall,
-  },
-  "$": {
-    tile: Tiles.Floor,
-    spawn: () => new Entities.Chest(),
-  },
-});
-
-export let GuardRoom = new RoomBuilder(`
-#########
-#....%..#
-#.%.....#
-+....%..+
-#.%.....#
-#%%....%#
-####+####
-`, {
-  "#": {
-    tile: Tiles.Wall,
-  },
-  ".": {
-    tile: Tiles.Floor,
-  },
-  "%": {
-    spawn: () => {
-      let entity = new Entities.Chest();
-      entity.glyph.char = RNG.element(Chars.WoodenStuff);
-      entity.glyph.fg = RNG.element(Colors.Oranges);
-      return entity;
+  levelTypes: [Levels.PrimordialCaverns],
+  legend: {
+    "#": {
+      tile: Tiles.Wall,
+    },
+    "$": {
+      tile: Tiles.Floor,
+      spawn: () => new Entities.Chest(),
     },
   },
-  "+": {
-    tile: Tiles.Floor,
-    constraint: tile => tile.type.walkable,
-  },
 });
 
-export let PoisonPit = new RoomBuilder(`
+export let SnakePit = new RoomBuilder("snake-pit", `
 .........
 .#%%.%#..
 #%%s%%%#.
@@ -134,21 +114,74 @@ export let PoisonPit = new RoomBuilder(`
 .#%%.%#s.
 ..#......
 `, {
-  "$": {
-    tile: Tiles.Floor,
-    spawn: () => new Entities.Chest(),
-  },
-  "#": {
-    tile: Tiles.Wall,
-    constraint: tile => tile.type === Tiles.Wall,
-  },
-  "%": {
-    tile: Tiles.Floor,
-    substance: () => new Substances.Slime(Infinity),
-  },
-  "s": {
-    tile: Tiles.Floor,
-    substance: () => new Substances.Slime(Infinity),
-    spawn: () => new Entities.Snake(),
+  levelTypes: [Levels.PrimordialCaverns],
+  rarity: Rarity.Uncommon,
+  legend: {
+    "$": {
+      tile: Tiles.Floor,
+      spawn: () => new Entities.Chest(),
+    },
+    "#": {
+      tile: Tiles.Wall,
+      constraint: tile => tile.type === Tiles.Wall,
+    },
+    "%": {
+      tile: Tiles.Floor,
+      substance: () => new Substances.Slime(Infinity),
+    },
+    "s": {
+      tile: Tiles.Floor,
+      substance: () => new Substances.Slime(Infinity),
+      spawn: () => new Entities.Snake(),
+    },
   },
 });
+
+export let Monolith = new RoomBuilder("monolith", `
+.........
+....#....
+...###...
+..#####..
+...###...
+....#....
+.........
+`, {
+  levelTypes: [Levels.PrimordialCaverns],
+  rarity: Rarity.Common,
+  legend: {
+    ".": {
+      constraint: tile => tile.type.walkable,
+    },
+    "#": {
+      tile: Tiles.Wall,
+    }
+  }
+});
+
+export let OpenVault = new RoomBuilder("open-vault", `
+#%%%%%#
+##...##
+#..$..#
+##...##
+###.###
+**.+.**
+`, {
+  rarity: Rarity.Common,
+  legend: {
+    "+": {
+      constraint: tile => tile.type.walkable,
+    },
+    "#": {
+      tile: Tiles.Wall,
+    },
+    "%": {
+      tile: Tiles.Wall,
+      constraint: tile => !tile.type.walkable,
+    },
+    "$": {
+      tile: Tiles.Floor,
+      spawn: () => new Entities.Chest(),
+    },
+  },
+});
+

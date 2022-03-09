@@ -76,6 +76,9 @@ export class GameView extends View {
       case " ":
         this.tryUseAbility();
         break;
+      case "D":
+        this.viewport.dijkstraMapsEnabled = !this.viewport.dijkstraMapsEnabled;
+        break;
       case "G":
         this.ui.open(new GlyphPickerView());
         break;

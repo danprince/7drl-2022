@@ -1,7 +1,7 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
 import { Chars } from "./chars";
-import { DealDamageEvent, DeathEvent, DespawnEvent, EventHandler, GameEvent, KillEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
-import { directionToGridVector } from "./helpers";
+import { DealDamageEvent, DeathEvent, DespawnEvent, EventHandler, GameEvent, InteractEvent, KillEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
+import { dijkstra, directionToGridVector } from "./helpers";
 import { Glyph, Terminal } from "./terminal";
 import { Colors, UI } from "./ui";
 import type { LevelBuilder } from "./builders";
@@ -31,12 +31,8 @@ export class Game extends EventHandler {
   setLevel(level: Level) {
     this.level = level;
     this.level.autotile();
-
+    this.player.pos = Point.clone(level.entrance);
     this.level.addEntity(this.player);
-    this.player.pos = {
-      x: RNG.int(0, this.level.width),
-      y: RNG.int(0, this.level.width),
-    };
   }
 
   setPlayer(player: Player) {
@@ -131,6 +127,8 @@ export class Level extends EventHandler {
   tiles: (Tile | undefined)[] = [];
   fx: FX[] = [];
   effects: Effect[] = [];
+  entrance: Point.Point = { x: -1, y: -1 };
+  exits: Point.Point[] = [];
 
   constructor(type: LevelType, width: number, height: number) {
     super();
@@ -241,6 +239,22 @@ export class Level extends EventHandler {
       }
     }
   }
+
+  getDijkstraMap(start: Point.Point) {
+    return dijkstra(
+      this.width,
+      this.height,
+      start,
+      (_, pos) => {
+        let tile = this.getTile(pos.x, pos.y);
+        return tile?.type.walkable ? 1 : Infinity;
+      }
+    );
+  }
+
+  findShortestPath(start: Point.Point, end: Point.Point) {
+    return this.getDijkstraMap(start).pathTo(end);
+  }
 }
 
 interface VariantGlyph {
@@ -305,6 +319,8 @@ export class Tile {
     this.type = type;
     this.glyph = type.assignGlyph();
   }
+
+  onEnter(entity: Entity) {}
 
   update() {
     this.substance?.update();
@@ -451,6 +467,7 @@ export abstract class Entity extends EventHandler {
   energy = 0;
   parent: Entity | undefined;
   pushable = false;
+  interactive = false;
   intentGlyph: Glyph | undefined;
   immunities: StatusType[] = [];
   statuses: Status[] = [];
@@ -583,9 +600,13 @@ export abstract class Entity extends EventHandler {
     new DeathEvent(this, damage, killer).dispatch();
 
     if (this.dead) {
-      this.level.removeEntity(this);
-      new DespawnEvent(this).dispatch();
+      this.despawn();
     }
+  }
+
+  despawn() {
+    this.level.removeEntity(this);
+    new DespawnEvent(this).dispatch();
   }
 
   hasStatus(type: StatusType): boolean {
@@ -693,6 +714,11 @@ export abstract class Entity extends EventHandler {
 
     if (entities.length) {
       for (let entity of entities) {
+        if (entity.interactive) {
+          new InteractEvent(this, entity).dispatch();
+          continue;
+        }
+
         if (entity.pushable) {
           new PushEvent(this, entity).dispatch();
           continue;
@@ -718,6 +744,7 @@ export abstract class Entity extends EventHandler {
     // TODO: Tile should probably handle all of this
     tile.substance?.onEnter(this);
     tile.type.onEnter(this, tile);
+    tile.onEnter(this);
     new TileEnterEvent(this, tile).dispatch();
 
     this.didMove = true;

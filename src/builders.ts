@@ -1,17 +1,16 @@
 import { Array2D, Point, RNG, PRNG, Direction } from "silmarils";
 import { Entity, Level, LevelType, Substance, Tile, TileType } from "./game";
 import { assert, directionToGridVector } from "./helpers";
+import * as Tiles from "./tiles";
 
 // Quality tests to ensure that it's possible to get from the spawn
 // to at least one exit.
 
+// TODO: Default legend for room builders?
 
 // Next steps
 // - Playtime event handlers
 // - Prevent rooms from overlapping other rooms?
-// - Each room has a cost and each level has a budget
-//   - For example, centerpiece costs 100, no budget left
-//   - Alternatively, smaller, less important room might cost 10
 //
 // Should builders be abstract?
 // Probably want to say "reward" rather than chest and let some
@@ -38,6 +37,8 @@ export interface CellBuilder {
   constraint?: TileConstraint;
   substance?: CreateSubstance;
 }
+
+export class ConstraintError extends Error {}
 
 export class RoomBuilderContext {
   entitiesByKey: Record<string, Entity[]> = {};
@@ -75,16 +76,21 @@ export enum Rarity {
   Rare = "rare",
 }
 
+const CHANCE_UNCOMMON = 0.25;
+const CHANCE_RARE = 0.05;
+
 export interface RoomBuilderOptions {
   rotates: boolean;
   rarity: Rarity;
   cost: number;
   levelTypes: LevelType[];
+  legend: Record<string, Omit<CellBuilder, "key">>;
 
   afterBuild(context: RoomBuilderContext): void;
 }
 
 export class RoomBuilder {
+  id: string;
   cells: Array2D.Array2D<CellBuilder>;
 
   options: RoomBuilderOptions = {
@@ -92,21 +98,23 @@ export class RoomBuilder {
     rarity: Rarity.Common,
     cost: 25,
     levelTypes: [],
+    legend: {},
     afterBuild: () => {},
   };
 
   constructor(
+    id: string,
     template: string,
-    legend: Record<string, Omit<CellBuilder, "key">>,
     options: Partial<RoomBuilderOptions> = {},
   ) {
-    let map = Array2D.fromString(template);
+    this.id = id;
+    this.options = { ...this.options, ...options };
 
+    let map = Array2D.fromString(template);
     this.cells = Array2D.map(map, (char) => {
+      let { legend } = this.options;
       return { key: char, ...legend[char] };
     });
-
-    this.options = { ...this.options, ...options };
   }
 
   checkConstraints(level: Level, origin: Point.Point): boolean {
@@ -200,7 +208,6 @@ export class RoomBuilder {
 export enum TileMarker {
   Floor,
   Wall,
-  Exit,
 }
 
 export enum Symmetry {
@@ -210,29 +217,53 @@ export enum Symmetry {
   Both = 3,
 }
 
+export const roomBuilderRegistry: Record<string, RoomBuilder> = {};
+
+export function registerRoomBuilders(builders: Record<string, RoomBuilder>) {
+  Object.assign(roomBuilderRegistry, builders);
+}
+
+export function getRoomBuildersByType(levelType: LevelType) {
+  return Object.values(roomBuilderRegistry).filter(builder => {
+    return (
+      // Builders with no specific level type can go anywhere
+      builder.options.levelTypes.length === 0 ||
+      // Otherwise they need to match the current level
+      builder.options.levelTypes.includes(levelType)
+    );
+  });
+}
+
 export class LevelBuilder {
+  static build(levelType: LevelType, width = 21, height = 21): Level {
+    for (let tries = 0; tries < 100; tries++) {
+      console.group("Build", levelType.name);
+      let builder = new LevelBuilder(levelType, width, height);
+
+      try {
+        return levelType.build(builder);
+      } catch (err: any) {
+        if (err instanceof ConstraintError) {
+          console.error(err.message, builder);
+          continue;
+        } else {
+          throw err;
+        }
+      } finally {
+        console.groupEnd();
+      }
+    }
+
+    throw new Error("Could not generate a level");
+  }
+
   levelType: LevelType;
   rng: PRNG.RNG;
   map: TileMarker[] = [];
   width: number;
   height: number;
-
-  static roomBuilders: Record<string, RoomBuilder> = {};
-
-  static registerRoomBuilders(roomBuilders: Record<string, RoomBuilder>) {
-    Object.assign(this.roomBuilders, roomBuilders);
-  }
-
-  static getRoomBuildersByType(levelType: LevelType) {
-    return Object.values(this.roomBuilders).filter(builder => {
-      return builder.options.levelTypes.includes(levelType);
-    });
-  }
-
-  static build(levelType: LevelType, width = 21, height = 21) {
-    let builder = new LevelBuilder(levelType, width, height);
-    return levelType.build(builder);
-  }
+  entrance: Point.Point | undefined;
+  exits: Point.Point[] = [];
 
   constructor(levelType: LevelType, width: number, height: number) {
     this.levelType = levelType;
@@ -242,6 +273,14 @@ export class LevelBuilder {
 
     for (let { x, y } of this.cells()) {
       this.map[x + y * width] = TileMarker.Floor;
+    }
+  }
+
+  private *cells() {
+    for (let x = 0; x < this.width; x++) {
+      for (let y = 0; y < this.height; y++) {
+        yield Point.from(x, y);
+      }
     }
   }
 
@@ -387,8 +426,6 @@ export class LevelBuilder {
     return this;
   }
 
-  // TODO: Use Array2D
-  // TODO: Extract CA logic
   cellularAutomata({
     iterations = 10,
     rules,
@@ -429,6 +466,25 @@ export class LevelBuilder {
     return this;
   }
 
+  addPerimeterWall() {
+    let y0 = 0;
+    let y1 = this.height - 1;
+    let x0 = 0;
+    let x1 = this.width - 1;
+
+    for (let x = 0; x < this.width; x++) {
+      this.set(x, y0, TileMarker.Wall);
+      this.set(x, y1, TileMarker.Wall);
+    }
+
+    for (let y = 0; y < this.height; y++) {
+      this.set(x0, y, TileMarker.Wall);
+      this.set(x1, y, TileMarker.Wall);
+    }
+
+    return this;
+  }
+
   noise(bias: number = 0.5) {
     for (let { x, y } of this.cells()) {
       this.map[x + y * this.width] = PRNG.chance(this.rng, bias)
@@ -439,31 +495,45 @@ export class LevelBuilder {
     return this;
   }
 
-  randomCell(): Point.Point {
+  private randomCell(): Point.Point {
     return {
       x: PRNG.int(this.rng, 0, this.width),
       y: PRNG.int(this.rng, 0, this.height),
     };
   }
 
-  swapOne(src: TileMarker, dst: TileMarker): LevelBuilder {
+  private randomCellByType(type: TileMarker) {
     for (let retry = 0; retry < 100; retry++) {
       let { x, y } = this.randomCell();
       let marker = this.get(x, y);
-
-      if (marker === src) {
-        this.set(x, y, dst);
-        return this;
+      if (marker === type) {
+        return { x, y };
       }
     }
 
-    throw new Error("Could not swap. Ran out of tries");
+    throw new ConstraintError("Could not find marker. Ran out of tries");
+  }
+
+  createEntrance() {
+    this.entrance = this.randomCellByType(TileMarker.Floor);
+    console.log(this.entrance);
+    return this;
+  }
+
+  createExit() {
+    // TODO: Parameterise to put exits far away from entrances?
+    let exit = this.randomCellByType(TileMarker.Floor);
+    this.exits.push(exit);
+    return this;
   }
 
   build(
     mapper: (marker: TileMarker) => TileType
   ): Level {
     let level = new Level(this.levelType, this.width, this.height);
+
+    level.entrance = this.entrance;
+    level.exits = this.exits;
 
     for (let { x, y } of this.cells()) {
       let mark = this.get(x, y)!;
@@ -472,25 +542,75 @@ export class LevelBuilder {
       level.setTile(x, y, tile);
     }
 
-    let budget = 100;
-    let roomBuilders = LevelBuilder.getRoomBuildersByType(this.levelType);
-    RNG.shuffle(roomBuilders);
+    let roomBuilderQueue = getRoomBuildersByType(this.levelType);
 
-    while (roomBuilders.length && budget > 0) {
-      let roomBuilder = roomBuilders.pop()!;
-      if (roomBuilder.options.cost > budget) continue;
+    // Prevent room selection bias
+    RNG.shuffle(roomBuilderQueue);
+
+    let budget = RNG.int(50, 150);
+
+    // TODO: Should probably never place a room if it overlaps entrances/exits
+
+    while (roomBuilderQueue.length) {
+      let roomBuilder = roomBuilderQueue.shift()!;
+      let { rarity } = roomBuilder.options;
+
+      if (rarity === Rarity.Uncommon && !RNG.chance(CHANCE_UNCOMMON)) {
+        continue;
+      }
+
+      if (rarity === Rarity.Rare && !RNG.chance(CHANCE_RARE)) {
+        continue;
+      }
+
+      if (roomBuilder.options.cost > budget) {
+        continue;
+      }
+
       let built = roomBuilder.tryToBuild(level);
-      if (built) budget -= roomBuilder.options.cost;
+
+      if (built) {
+        budget -= roomBuilder.options.cost;
+        console.log("placed", roomBuilder.id);
+      } else {
+        console.log("failed to place", roomBuilder.id);
+      }
+
+      if (budget < 10) {
+        console.log("no more budget");
+        break;
+      }
+
+      if (roomBuilderQueue.length === 0) {
+        console.log("out of rooms");
+        break;
+      }
+    }
+
+    let map = level.getDijkstraMap(level.entrance);
+
+    let accessibleExits = level.exits.filter(exit => {
+      let path = map.pathTo(exit);
+      return path.length > 0;
+    });
+
+    if (accessibleExits.length === 0) {
+      throw new ConstraintError("No accessible exits");
+    }
+
+    for (let exit of accessibleExits) {
+      let door = new Tile(Tiles.Doorway);
+
+      door.onEnter = entity => {
+        if (entity === game.player) {
+          let level = LevelBuilder.build(this.levelType);
+          game.setLevel(level);
+        }
+      };
+
+      level.setTile(exit.x, exit.y, door);
     }
 
     return level;
-  }
-
-  private *cells() {
-    for (let x = 0; x < this.width; x++) {
-      for (let y = 0; y < this.height; y++) {
-        yield Point.from(x, y);
-      }
-    }
   }
 }
