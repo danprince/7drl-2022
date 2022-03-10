@@ -9,7 +9,8 @@ export let PrimordialCaverns = new LevelType({
   characteristics: {
     defaultFloorTile: Tiles.Floor,
     defaultWallTile: Tiles.Wall,
-    commonEntityTypes: [Entities.Stoneshell, Entities.Skeleton],
+    defaultLiquidTile: Tiles.Water,
+    commonEntityTypes: [Entities.Stoneshell, Entities.Boulder],
     uncommonEntityTypes: [Entities.Boar, Entities.Worm],
     rareEntityTypes: [Entities.FossilKnight],
     decorativeEntityTypes: [Entities.MushroomBolete],
@@ -35,6 +36,7 @@ export let Mantle = new LevelType({
   characteristics: {
     defaultFloorTile: Tiles.VolcanicFloor,
     defaultWallTile: Tiles.VolcanicWall,
+    defaultLiquidTile: Tiles.Lava,
     commonEntityTypes: [Entities.Maguana, Entities.Mantleshell, Entities.Gnome],
     uncommonEntityTypes: [Entities.Boulder],
     rareEntityTypes: [Entities.Krokodil],

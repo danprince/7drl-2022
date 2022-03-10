@@ -11,6 +11,14 @@ const ENERGY_REQUIRED_PER_TURN = 12;
 export type GameMessageComponent = string | number | Entity | DamageType | Status | Tile;
 export type GameMessage = GameMessageComponent[];
 
+interface MovementOptions {
+  forced: boolean;
+}
+
+const defaultMovementOptions: MovementOptions = {
+  forced: false
+};
+
 export class Game extends EventHandler {
   ui: UI = null!;
   level: Level = null!;
@@ -69,7 +77,10 @@ export class Game extends EventHandler {
     }
 
     this.turns += 1;
-    yield 1;
+
+    // If the player is no longer acting then we need to put frames
+    // in between turns to stay responsive.
+    yield this.player.dead ? 1 : 0;
   }
 
   log(...message: GameMessage) {
@@ -84,6 +95,7 @@ export type FX = (terminal: Terminal) => void;
 export interface LevelCharacteristics {
   defaultFloorTile: TileType;
   defaultWallTile: TileType;
+  defaultLiquidTile: TileType;
   commonEntityTypes: OneOrMore<Constructor<Entity>>;
   uncommonEntityTypes: OneOrMore<Constructor<Entity>>;
   rareEntityTypes: OneOrMore<Constructor<Entity>>;
@@ -223,12 +235,19 @@ export class Level extends EventHandler {
         let b = this.getTile(x, y - 1);
         let c = this.getTile(x + 1, y);
         let d = this.getTile(x, y + 1);
+        let offset = 0;
 
-        let offset =
-          (a && a.type.autotiling === tile.type.autotiling ? 1 : 0) |
-          (b && b.type.autotiling === tile.type.autotiling ? 2 : 0) |
-          (c && c.type.autotiling === tile.type.autotiling ? 4 : 0) |
-          (d && d.type.autotiling === tile.type.autotiling ? 8 : 0);
+        if (tile.type.autotiling.length == 2) {
+          offset = d && d.type.autotiling === tile.type.autotiling ? 0 : 1;
+        }
+
+        if (tile.type.autotiling.length === 16) {
+          offset =
+            (a && a.type.autotiling === tile.type.autotiling ? 1 : 0) |
+            (b && b.type.autotiling === tile.type.autotiling ? 2 : 0) |
+            (c && c.type.autotiling === tile.type.autotiling ? 4 : 0) |
+            (d && d.type.autotiling === tile.type.autotiling ? 8 : 0);
+        }
 
         tile.glyph.char = tile.type.autotiling[offset];
       }
@@ -272,14 +291,14 @@ function isVariantGlyph(glyph: Glyph | VariantGlyph): glyph is VariantGlyph {
   return Array.isArray(glyph.fg);
 }
 
-type TileTypeProps = {
+interface TileTypeProps extends Partial<EventHandler> {
   walkable?: TileType["walkable"];
   glyph: TileType["glyph"];
   autotiling?: TileType["autotiling"];
   diggable?: TileType["diggable"];
-  onCreate?: TileType["onCreate"];
-  onUpdate?: TileType["onUpdate"];
-  onEnter?: TileType["onEnter"];
+  liquid?: TileType["liquid"];
+  onCreate?: TileType["onCreate"]
+  onUpdate?: TileType["onUpdate"]
 }
 
 export class TileType extends EventHandler {
@@ -287,17 +306,27 @@ export class TileType extends EventHandler {
   autotiling?: string[];
   walkable: boolean;
   diggable: boolean;
+  liquid: boolean;
 
-  constructor(props: TileTypeProps) {
+  constructor({
+    glyph,
+    autotiling,
+    walkable,
+    diggable,
+    liquid,
+    ...events
+  }: TileTypeProps) {
     super();
-    this.glyph = props.glyph;
-    this.autotiling = props.autotiling;
-    this.walkable = props.walkable || false;
-    this.diggable = props.diggable || false;
-    this.onCreate = props.onCreate ? props.onCreate : this.onCreate;
-    this.onUpdate = props.onUpdate ? props.onUpdate : this.onUpdate;
-    this.onEnter = props.onEnter ? props.onEnter : this.onEnter;
+    Object.assign(this, events);
+    this.glyph = glyph;
+    this.autotiling = autotiling;
+    this.walkable = walkable || false;
+    this.diggable = diggable || false;
+    this.liquid = liquid || false;
   }
+
+  onCreate(tile: Tile) {}
+  onUpdate(tile: Tile) {}
 
   assignGlyph() {
     if (isVariantGlyph(this.glyph)) {
@@ -310,10 +339,6 @@ export class TileType extends EventHandler {
       return { ...this.glyph };
     }
   }
-
-  onCreate(tile: Tile) {}
-  onEnter(tile: Tile, entity: Entity) {}
-  onUpdate(tile: Tile) {}
 }
 
 export class Tile {
@@ -326,16 +351,13 @@ export class Tile {
   constructor(type: TileType) {
     this.type = type;
     this.glyph = type.assignGlyph();
-    this.type.onCreate(this);
   }
 
   onEnter(entity: Entity) {
     this.substance?.onEnter(entity);
-    this.type.onEnter(this, entity);
   }
 
   update() {
-    this.type.onUpdate(this);
     this.substance?.update();
   }
 
@@ -580,7 +602,8 @@ export abstract class Entity extends EventHandler {
     }
 
     if (damage.direction && damage.knockback && !this.heavy) {
-      this.moveBy(damage.direction[0], damage.direction[1]);
+      let [dx, dy] = damage.direction;
+      this.moveBy(dx, dy, { forced: true });
     }
 
     this.hp.current = Math.max(this.hp.current - damage.amount, 0);
@@ -658,38 +681,38 @@ export abstract class Entity extends EventHandler {
     }
   }
 
-  moveBy(x: number, y: number) {
-    return this.moveTo(this.pos.x + x, this.pos.y + y);
+  moveBy(x: number, y: number, options = defaultMovementOptions) {
+    return this.moveTo(this.pos.x + x, this.pos.y + y, options);
   }
 
-  moveIn(direction: Direction.Direction) {
+  moveIn(direction: Direction.Direction, options = defaultMovementOptions) {
     let [dx, dy] = directionToGridVector(direction);
-    return this.moveBy(dx, dy);
+    return this.moveBy(dx, dy, options);
   }
 
-  moveTowards(target: Entity) {
+  moveTowards(target: Entity, options = defaultMovementOptions) {
     let dx = target.pos.x - this.pos.x;
     let dy = target.pos.y - this.pos.y;
     return Math.abs(dx) > Math.abs(dy)
-      ? this.moveBy(Math.sign(dx), 0)
-      : this.moveBy(0, Math.sign(dy));
+      ? this.moveBy(Math.sign(dx), 0, options)
+      : this.moveBy(0, Math.sign(dy), options);
   }
 
-  moveAway(target: Entity) {
+  moveAway(target: Entity, options = defaultMovementOptions) {
     let dx = this.pos.x - target.pos.x;
     let dy = this.pos.x - target.pos.y;
     return Math.abs(dx) > Math.abs(dy)
-      ? this.moveBy(Math.sign(dx), 0)
-      : this.moveBy(0, Math.sign(dy));
+      ? this.moveBy(Math.sign(dx), 0, options)
+      : this.moveBy(0, Math.sign(dy), options);
   }
 
-  moveTowardsWithDiagonals(target: Entity) {
+  moveTowardsWithDiagonals(target: Entity, options = defaultMovementOptions) {
     let dx = target.pos.x - this.pos.x;
     let dy = target.pos.y - this.pos.y;
-    return this.moveBy(Math.sign(dx), Math.sign(dy));
+    return this.moveBy(Math.sign(dx), Math.sign(dy), options);
   }
 
-  moveTo(x: number, y: number) {
+  moveTo(x: number, y: number, options = defaultMovementOptions) {
     // Moves to a tile we're already on are pointless
     if (x === this.pos.x && y === this.pos.y) return false;
 
@@ -699,8 +722,14 @@ export abstract class Entity extends EventHandler {
     // Can't walk into void tiles
     if (tile == null) return false;
 
+    // Don't walk into liquid unless we're being forced
+    if (tile.type.liquid && !options.forced) {
+      this.didMove = false;
+      return true;
+    }
+
     // Can't walk into solid tiles
-    if (tile.type.walkable === false) {
+    if (!tile.type.walkable && !tile.type.liquid) {
       new TileBumpEvent(this, tile).dispatch();
       this.didMove = false;
       return false;
@@ -740,7 +769,6 @@ export abstract class Entity extends EventHandler {
 
     tile.onEnter(this);
     new TileEnterEvent(this, tile).dispatch();
-
     this.didMove = true;
 
     return true

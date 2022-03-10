@@ -24,7 +24,7 @@ export let Wall = new TileType({
   diggable: true,
   glyph: {
     char: Chars.BoneWalls,
-    fg: [Colors.Grey3],
+    fg: [Colors.Grey4],
   },
 });
 
@@ -57,7 +57,7 @@ export let Bones = new TileType({
 
 export let Doorway = new TileType({
   walkable: true,
-  glyph: Glyph(Chars.Doorway, Colors.Grey4),
+  glyph: Glyph(Chars.Doorway, Colors.Blue),
 });
 
 export let Fissure = new TileType({
@@ -86,5 +86,29 @@ export let VolcanicWall = new TileType({
   glyph: {
     char: Chars.Walls,
     fg: [Colors.Grey3],
+  },
+});
+
+export let Lava = new TileType({
+  liquid: true,
+  glyph: {
+    char: [Chars.Ripples],
+    fg: [Colors.Orange3],
+  },
+  onTileEnter({ entity, tile }) {
+    game.log(entity, "burns in", tile);
+    entity.die();
+  },
+});
+
+export let Water = new TileType({
+  liquid: true,
+  glyph: {
+    char: [Chars.Ripples],
+    fg: [Colors.Turquoise2, Colors.Turquoise3],
+  },
+  onTileEnter({ entity, tile }) {
+    game.log(entity, "drowns in", tile, "the");
+    entity.die();
   },
 });

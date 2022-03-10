@@ -35,11 +35,17 @@ export const getDefaultFloor: CreateTile = level =>
 export const getDefaultWall: CreateTile = level =>
   level.type.characteristics.defaultWallTile;
 
+export const getDefaultLiquid: CreateTile = level =>
+  level.type.characteristics.defaultLiquidTile;
+
 export const getOrganicFloor: CreateTile = level =>
   RNG.item(Tiles.Grass);
 
 export const isWalkable: TileRule = tile =>
   tile.type.walkable;
+
+export const isLiquid: TileRule = tile =>
+  tile.type.liquid;
 
 export const isDefaultWall: TileRule = (tile, level) =>
   tile.type === level.type.characteristics.defaultWallTile;
@@ -113,6 +119,12 @@ export const defaultLegend: Legend = {
     tile: getDefaultFloor,
     spawn: () => new Entities.Boulder(),
   },
+  "~": {
+    tile: getDefaultLiquid,
+  },
+  "≈": {
+    rule: isLiquid,
+  },
   "o": {
     tile: getObstacleTile,
   },
@@ -127,8 +139,5 @@ export const defaultLegend: Legend = {
   },
   "@": {
     // TODO: Miniboss
-  },
-  "~": {
-    // TODO: Default liquid
   },
 };

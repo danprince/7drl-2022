@@ -198,16 +198,15 @@ export class Boar extends Entity {
   description = "";
   glyph = Glyph(Chars.Boar, Colors.Grey3);
   speed = Speeds.EveryTurn;
-  hp = { current: 3, max: 3 };
+  hp = Stat(3);
 
   private status: "idle" | "hunting" | "stunned" | "charging" = "idle";
   private target?: Entity;
   private chargeDirection: Vector.Vector = [0, 0];
 
   moveInRandomDirection() {
-    let dir = RNG.item(...Direction.CARDINAL_DIRECTIONS);
-    let [dx, dy] = Direction.toVector(dir);
-    return this.moveBy(dx, dy);
+    let dir = RNG.element(Direction.CARDINAL_DIRECTIONS);
+    return this.moveIn(dir);
   }
 
   *charge(): Effect {
@@ -231,7 +230,7 @@ export class Boar extends Entity {
         break;
       }
 
-      let moved = this.moveBy(sx, sy);
+      let moved = this.moveBy(sx, sy, { forced: true });
 
       yield 1;
 
@@ -240,8 +239,10 @@ export class Boar extends Entity {
       }
     }
 
-    this.status = "stunned";
-    this.addStatus(new Statuses.Stunned(3));
+    if (!this.dead) {
+      this.status = "stunned";
+      this.addStatus(new Statuses.Stunned(3));
+    }
   }
 
   takeTurn() {
@@ -920,7 +921,7 @@ export class Boulder extends Entity {
   update() {
     if (this.rollDirection) {
       let [dx, dy] = Direction.toVector(this.rollDirection);
-      let moved = this.moveBy(dx, dy);
+      let moved = this.moveBy(dx, dy, { forced: true });
       if (moved === false && !this.didMove) {
         this.rollDirection = undefined;
       }

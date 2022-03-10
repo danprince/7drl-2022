@@ -79,6 +79,7 @@ export const Chars = {
   WoodenStuff: createCharSet(0xa4, 7),
 
   // Tiles
+  Liquid: createCharSet(0xb0, 16),
   Block1: "\xc0",
   Block2: "\xc1",
   Block3: "\xc2",

@@ -142,3 +142,15 @@ export let MushroomCave = new RoomBuilder("mushroom-cave", [`
     },
   },
 });
+
+export let Pool = new RoomBuilder("lake", [`
+....**
+.~~...
+.~~~~.
+.~~...
+.~~~~.
+..~~~.
+*.....
+`], {
+  rarity: Rarity.Uncommon,
+});

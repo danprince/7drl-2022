@@ -205,13 +205,7 @@ export class Siphon extends Vestige {
   description = `Draw from adjacent ${FISSURE}`;
 
   onTileEnter({ tile }: Events.TileEnterEvent): void {
-    for (let { x, y } of Point.mooreNeighbours(tile.pos)) {
-      let neighbour = game.level.getTile(x, y);
-
-      if (neighbour && neighbour.type === Tiles.Fissure) {
-        neighbour.type.onEnter(neighbour, this.owner);
-      }
-    }
+    // TODO: Suck up any substances from adjacent tiles, not just fissures
   }
 }
 

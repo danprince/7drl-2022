@@ -9,10 +9,10 @@ import { View, Colors } from "./ui";
 export class GameView extends View {
   fps = 40;
 
-  viewport = new ViewportPanel(2, 2, 21, 21);
-  messages = new MessagesPanel(this.viewport, 2, 24, 21, 10);
-  topBar = new TopBarPanel(2, 0, 21, 1);
-  sideBar = new SidebarPanel(0, 2, 1, 21);
+  viewport = new ViewportPanel(0, 2, 21, 21);
+  messages = new MessagesPanel(this.viewport, 0, 24, 21, 10);
+  topBar = new TopBarPanel(0, 0, 21, 1);
+  sideBar = new SidebarPanel(-1, 2, 1, 21);
 
   constructor(private game: Game) {
     super();
@@ -44,10 +44,13 @@ export class GameView extends View {
   }
 
   render(terminal: Terminal) {
-    this.viewport.render(terminal);
-    this.messages.render(terminal);
-    this.sideBar.render(terminal);
-    this.topBar.render(terminal);
+    let x = Math.floor(terminal.width / 2 - this.viewport.bounds.width / 2);
+    let y = 1;
+    let root = terminal.child(x, y, terminal.width, terminal.height);
+    this.viewport.render(root);
+    this.messages.render(root);
+    this.sideBar.render(root);
+    this.topBar.render(root);
   }
 
   onKeyDown(event: KeyboardEvent) {
