@@ -1,30 +1,68 @@
 import { Direction, Point, Vector } from "silmarils";
 import { Chars } from "./chars";
-import { MagmaBomb } from "./entities";
 import { Ability, Damage, DamageType, Effect, Entity, TargetingMode, Tile } from "./game";
 import { assert, directionToGridVector } from "./helpers";
-import { Molten, Poisoned, Stunned } from "./statuses";
+import { Molten, Stunned } from "./statuses";
 import { Glyph } from "./terminal";
 import { Colors } from "./ui";
 
-export abstract class Throwable extends Ability {
+export class Blowpipe extends Ability {
+  name = "Blowpipe";
+  description = "Shoots darts";
+  glyph = Glyph(Chars.Missile, Colors.Turquoise);
   targeting = TargetingMode.Directional;
-  abstract projectileGlyph: Glyph;
 
   use(direction: Direction.Direction) {
-    game.level.addEffect(this.hurl(direction));
+    game.level.addEffect(this.shoot(direction));
     return true;
   }
 
-  abstract onHitTile(tile: Tile, vec: Vector.Vector): boolean;
-  abstract onHitEntities(entities: Entity[], vec: Vector.Vector): boolean;
+  canUse(): boolean {
+    return true;
+  }
 
-  *hurl(direction: Direction.Direction): Effect {
+  onHitTile(tile: Tile, vec: Vector.Vector): boolean {
+    return true;
+  }
+
+  onHitEntities(entities: Entity[], vec: Vector.Vector): boolean {
+    for (let entity of entities) {
+      game.player.attack(entity, {
+        type: DamageType.Misc,
+        amount: 1,
+        direction: vec,
+      });
+    }
+
+    return true;
+  }
+
+  getProjectileGlyph(direction: Direction.Direction) {
+    switch (direction) {
+      case Direction.NORTH:
+      case Direction.SOUTH:
+        return Glyph("|", Colors.Grey3);
+      case Direction.EAST:
+      case Direction.WEST:
+        return Glyph("-", Colors.Grey3);
+      case Direction.NORTH_EAST:
+      case Direction.SOUTH_WEST:
+        return Glyph("/", Colors.Grey3);
+      case Direction.NORTH_WEST:
+      case Direction.SOUTH_EAST:
+        return Glyph("\\", Colors.Grey3);
+      default:
+        return Glyph("+", Colors.Grey3);
+    }
+  }
+
+  *shoot(direction: Direction.Direction): Effect {
     let vec = directionToGridVector(direction);
     let pos = Point.clone(game.player.pos);
+    let glyph = this.getProjectileGlyph(direction);
 
     let done = game.level.addFX(term => {
-      term.putGlyph(pos.x, pos.y, this.projectileGlyph);
+      term.putGlyph(pos.x, pos.y, glyph);
     });
 
     while (true) {
@@ -55,40 +93,6 @@ export abstract class Throwable extends Ability {
     }
 
     done();
-  }
-}
-
-export class Erupt extends Throwable {
-  name = "Erupt";
-  description = "Throw some magma";
-  glyph = Glyph(Chars.Missile, Colors.Orange, Colors.Orange1);
-  projectileGlyph = Glyph(Chars.Block1, Colors.Orange);
-  targeting = TargetingMode.Directional;
-
-  canUse(): boolean {
-    return game.player.hasStatus(Molten);
-  }
-
-  use(direction: Direction.Direction) {
-    game.level.addEffect(this.hurl(direction));
-    game.player.removeStatusType(Molten);
-    return true;
-  }
-
-  onHitTile(): boolean {
-    return true;
-  }
-
-  onHitEntities(entities: Entity[], vec: Vector.Vector): boolean {
-    for (let entity of entities) {
-      game.player.attack(entity, {
-        type: DamageType.Explosion,
-        amount: 2,
-        direction: vec,
-      });
-    }
-
-    return true;
   }
 }
 
@@ -209,83 +213,5 @@ export class Grapple extends Ability {
         yield 1;
       }
     }
-  }
-}
-
-export class Sling extends Throwable {
-  name = "Sling";
-  description = "Throw a stone";
-  glyph = Glyph(Chars.Missile, Colors.Grey4, Colors.Grey2);
-  projectileGlyph = Glyph("*", Colors.Grey3);
-
-  canUse(): boolean {
-    return true;
-  }
-
-  onHitTile(tile: Tile, vec: Vector.Vector): boolean {
-    return true;
-  }
-
-  onHitEntities(entities: Entity[], vec: Vector.Vector): boolean {
-    for (let entity of entities) {
-      let dmg = this.getStoneDamage();
-      game.player.attack(entity, dmg);
-    }
-    return true;
-  }
-
-  getStoneDamage(): Damage {
-    return {
-      type: DamageType.Stone,
-      amount: 1
-    };
-  }
-}
-
-export class Dart extends Throwable {
-  name = "Dart";
-  description = "Poison dart";
-  glyph = Glyph(">", Colors.Green, Colors.Green1);
-  projectileGlyph = Glyph(">", Colors.Green);
-  turnsOfPoison = 3;
-
-  canUse(): boolean {
-    return true;
-  }
-
-  onHitTile(tile: Tile, vec: Vector.Vector): boolean {
-    return true;
-  }
-
-  onHitEntities(entities: Entity[], vec: Vector.Vector): boolean {
-    for (let entity of entities) {
-      game.player.attack(entity, {
-        type: DamageType.Misc,
-        amount: 1,
-        direction: vec,
-        statuses: [new Poisoned(this.turnsOfPoison)],
-      });
-    }
-    return true;
-  }
-}
-
-export class Charge extends Ability {
-  name = "Charge";
-  description = "";
-  targeting = TargetingMode.None;
-  glyph = Glyph(Chars.CircleOutline, Colors.Orange, Colors.Orange2);
-
-  canUse(): boolean {
-    return game.player.hasStatus(Molten);
-  }
-
-  use() {
-    game.player.removeStatusType(Molten);
-    let bomb = new MagmaBomb();
-    bomb.pos = Point.clone(game.player.pos);
-    game.level.addEntity(bomb);
-    game.log(this.owner, "plants the charge");
-    return true;
   }
 }

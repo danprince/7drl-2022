@@ -39,7 +39,7 @@ async function start() {
   let level = LevelBuilder.build(Levels.Mantle);
 
   let player = new Player();
-  player.setAbility(new Abilities.Dart());
+  player.setAbility(new Abilities.Blowpipe());
 
   game.setPlayer(player);
   game.setLevel(level);
