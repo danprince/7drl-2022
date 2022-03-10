@@ -8,7 +8,7 @@ import * as Substances from "./substances";
 import * as Vestiges from "./vestiges";
 import * as Effects from "./effects";
 import { Chars } from "./chars";
-import { InteractEvent, PushEvent, TakeDamageEvent } from "./events";
+import { DeathEvent, InteractEvent, PushEvent, TakeDamageEvent } from "./events";
 
 export abstract class MultiTurnEntity extends Entity {
   abstract takeMultiTurn(): Generator<number, boolean>;
@@ -1061,5 +1061,40 @@ export class Skeleton extends Entity {
     }
 
     return true;
+  }
+}
+
+export class Gnome extends Entity {
+  name = "Gnome";
+  description = "";
+  glyph = Glyph(Chars.Gnome, Colors.Pink);
+  speed = Speeds.Every2Turns;
+  hp = Stat(2);
+
+  takeTurn(): UpdateResult {
+    return true;
+  }
+}
+
+export class SnakeEgg extends Entity {
+  name = "Snake Egg";
+  description = "";
+  glyph = Glyph(Chars.Egg, Colors.White);
+  hp = Stat(3);
+
+  onDeath(event: DeathEvent): void {
+    this.hatch();
+  }
+
+  onTakeDamage(event: TakeDamageEvent): void {
+    this.hatch();
+  }
+
+  hatch() {
+    this.despawn();
+    let snake = new Snake();
+    snake.pos = Point.clone(this.pos);
+    game.level.addEntity(snake);
+    game.log("A", snake, "crawls out of", this);
   }
 }

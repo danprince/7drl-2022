@@ -17,6 +17,7 @@ export class Game extends EventHandler {
   player: Player = null!;
   messages: GameMessage[] = [];
   handlers: EventHandler[] = [];
+  turns: number = 0;
 
   onEvent(event: GameEvent): void {
     if (this.level) {
@@ -67,6 +68,7 @@ export class Game extends EventHandler {
       }
     }
 
+    this.turns += 1;
     yield 1;
   }
 
@@ -248,6 +250,16 @@ export class Level extends EventHandler {
   findShortestPath(start: Point.Point, end: Point.Point) {
     return this.getDijkstraMap(start).pathTo(end);
   }
+
+  points(): Point.Point[] {
+    let points: Point.Point[] = [];
+    for (let x = 0; x < this.width; x++) {
+      for (let y = 0; y < this.height; y++) {
+        points.push({ x, y });
+      }
+    }
+    return points;
+  }
 }
 
 interface VariantGlyph {
@@ -265,8 +277,9 @@ type TileTypeProps = {
   glyph: TileType["glyph"];
   autotiling?: TileType["autotiling"];
   diggable?: TileType["diggable"];
-  onEnter?: TileType["onEnter"];
+  onCreate?: TileType["onCreate"];
   onUpdate?: TileType["onUpdate"];
+  onEnter?: TileType["onEnter"];
 }
 
 export class TileType extends EventHandler {
@@ -281,8 +294,9 @@ export class TileType extends EventHandler {
     this.autotiling = props.autotiling;
     this.walkable = props.walkable || false;
     this.diggable = props.diggable || false;
-    this.onEnter = props.onEnter ? props.onEnter : this.onEnter;
+    this.onCreate = props.onCreate ? props.onCreate : this.onCreate;
     this.onUpdate = props.onUpdate ? props.onUpdate : this.onUpdate;
+    this.onEnter = props.onEnter ? props.onEnter : this.onEnter;
   }
 
   assignGlyph() {
@@ -297,8 +311,9 @@ export class TileType extends EventHandler {
     }
   }
 
-  onEnter(entity: Entity, tile: Tile) {}
-  onUpdate(entity: Entity, tile: Tile) {}
+  onCreate(tile: Tile) {}
+  onEnter(tile: Tile, entity: Entity) {}
+  onUpdate(tile: Tile) {}
 }
 
 export class Tile {
@@ -311,11 +326,16 @@ export class Tile {
   constructor(type: TileType) {
     this.type = type;
     this.glyph = type.assignGlyph();
+    this.type.onCreate(this);
   }
 
-  onEnter(entity: Entity) {}
+  onEnter(entity: Entity) {
+    this.substance?.onEnter(entity);
+    this.type.onEnter(this, entity);
+  }
 
   update() {
+    this.type.onUpdate(this);
     this.substance?.update();
   }
 
@@ -467,7 +487,6 @@ export abstract class Entity extends EventHandler {
   heavy = false;
   visionDistance = 10;
   skipNextTurn = false;
-  vestiges: Vestige[] = [];
   didMove = false;
 
   abstract glyph: Glyph;
@@ -489,20 +508,9 @@ export abstract class Entity extends EventHandler {
   }
 
   onEvent(event: GameEvent): void {
-    for (let vestige of this.vestiges) {
-      event.sendTo(vestige);
-    }
-
     for (let status of this.statuses) {
       event.sendTo(status);
     }
-  }
-
-  addVestige(vestige: Vestige) {
-    this.vestiges.push(vestige);
-    vestige.owner = this;
-    vestige.onAdded();
-    new VestigeAddedEvent(this, vestige).dispatch();
   }
 
   addStatus(status: Status): boolean {
@@ -583,6 +591,10 @@ export abstract class Entity extends EventHandler {
   }
 
   die(damage?: Damage, killer?: Entity) {
+    if (this.dead) {
+      return;
+    }
+
     this.dead = true;
 
     if (killer) {
@@ -626,7 +638,6 @@ export abstract class Entity extends EventHandler {
     this.skipNextTurn = false;
 
     this.gainEnergy();
-    this.updateVestiges();
     this.updateStatuses();
 
     if (this.canTakeTurn()) {
@@ -635,12 +646,6 @@ export abstract class Entity extends EventHandler {
     }
 
     return result;
-  }
-
-  updateVestiges() {
-    for (let vestige of this.vestiges) {
-      vestige.onUpdate();
-    }
   }
 
   updateStatuses() {
@@ -706,7 +711,7 @@ export abstract class Entity extends EventHandler {
 
     if (entities.length) {
       for (let entity of entities) {
-        if (entity.interactive) {
+        if (entity.interactive && this.canInteract()) {
           new InteractEvent(this, entity).dispatch();
           continue;
         }
@@ -733,9 +738,6 @@ export abstract class Entity extends EventHandler {
     this.pos.x = x;
     this.pos.y = y;
 
-    // TODO: Tile should probably handle all of this
-    tile.substance?.onEnter(this);
-    tile.type.onEnter(this, tile);
     tile.onEnter(this);
     new TileEnterEvent(this, tile).dispatch();
 
@@ -750,6 +752,10 @@ export abstract class Entity extends EventHandler {
 
   distanceTo(entity: Entity): number {
     return Point.distance(this.pos, entity.pos);
+  }
+
+  canInteract() {
+    return this instanceof Player;
   }
 
   canSee(entity: Entity) {
@@ -785,8 +791,15 @@ export class Player extends Entity {
   hp = Stat(10);
   molten = false;
   ability: Ability | undefined;
+  vestiges: Vestige[] = [];
 
   onEvent(event: GameEvent): void {
+    super.onEvent(event);
+
+    for (let vestige of this.vestiges) {
+      event.sendTo(vestige);
+    }
+
     if (this.ability) {
       event.sendTo(this.ability);
     }
@@ -795,6 +808,24 @@ export class Player extends Entity {
   setAbility(ability: Ability) {
     this.ability = ability;
     this.ability.owner = this;
+  }
+
+  addVestige(vestige: Vestige) {
+    this.vestiges.push(vestige);
+    vestige.owner = this;
+    vestige.onAdded();
+    new VestigeAddedEvent(this, vestige).dispatch();
+  }
+
+  updateVestiges() {
+    for (let vestige of this.vestiges) {
+      vestige.onUpdate();
+    }
+  }
+
+  update() {
+    this.updateVestiges();
+    return super.update();
   }
 
   async tryTakeTurn() {

@@ -1,8 +1,8 @@
 import { TileType } from "./game";
-import { Molten } from "./statuses";
 import { Colors } from "./ui";
 import { Chars } from "./chars";
 import { Glyph } from "./terminal";
+import * as Substances from "./substances";
 
 export let Floor = new TileType({
   walkable: true,
@@ -62,16 +62,13 @@ export let Doorway = new TileType({
 
 export let Fissure = new TileType({
   walkable: true,
-  glyph: {
-    char: ["."],
-    fg: [Colors.Orange3, Colors.Orange2],
-    bg: [Colors.Orange1],
+  glyph: Glyph("+", Colors.Grey2),
+  onCreate(tile) {
+    tile.setSubstance(new Substances.Magma(Infinity));
   },
-  onEnter(entity, tile) {
-    if (entity === game.player) {
-      if (!game.player.hasStatus(Molten)) {
-        game.player.addStatus(new Molten);
-      }
+  onUpdate(tile) {
+    if (game.turns % 20 === 0) {
+      tile.setSubstance(new Substances.Magma(Infinity));
     }
   },
 });
@@ -80,7 +77,7 @@ export let VolcanicFloor = new TileType({
   walkable: true,
   glyph: {
     char: Chars.Diagonals,
-    fg: [Colors.Orange1],
+    fg: [Colors.Grey1],
   },
 });
 
@@ -88,6 +85,6 @@ export let VolcanicWall = new TileType({
   diggable: true,
   glyph: {
     char: Chars.Walls,
-    fg: [Colors.Orange2],
+    fg: [Colors.Grey3],
   },
 });

@@ -1,6 +1,6 @@
 import { Array2D, Point, Direction, PRNG } from "silmarils";
 import { Entity, Level, LevelType, Substance, Tile, TileType } from "./game";
-import { assert, dijkstra, directionToGridVector, maxBy, minBy, PointSet } from "./helpers";
+import { assert, directionToGridVector, maxBy, minBy, PointSet } from "./helpers";
 import * as Legend from "./legend";
 import * as Tiles from "./tiles";
 
@@ -110,21 +110,29 @@ export class RoomBuilder {
     });
   }
 
-  checkConstraints(
+  checkRules(
     level: Level,
     origin: Point.Point,
+    finalised: PointSet,
     variant: RoomVariantBuilder,
   ): boolean {
-    // TODO: Need some way for a tile constraint to require that it is accessible
-    // from a certain point etc
+    for (let x = origin.x; x < variant.width; x++) {
+      for (let y = origin.y; y < variant.height; y++) {
+        let pos = Point.from(x, y);
+        let cell = Array2D.get(variant, x, y);
 
-    // TODO: Silmarils needs an iterator for array 2d
-    for (let x = 0; x < variant.width; x++) {
-      for (let y = 0; y < variant.height; y++) {
-        let cell = Array2D.get(variant, x, y)!;
+        // Check whether the cell will actually build anything here
+        let willBuild = cell && (cell.spawn || cell.substance || cell.tile);
+
+        // Don't build over finalised tiles (e.g. rooms, entrances/exits)
+        if (willBuild && finalised.has(pos)) {
+          return false;
+        }
+
         let tile = level.getTile(origin.x + x, origin.y + y);
         if (tile == null) continue;
-        if (cell.constraint && !cell.constraint(tile, level)) {
+
+        if (!cell?.rule?.(tile, level)) {
           return false;
         }
       }
@@ -138,7 +146,7 @@ export class RoomBuilder {
     finalised: PointSet,
     rng: PRNG.RNG,
   ) {
-    retry: for (let tries = 0; tries < ROOM_BUILDER_RETRIES; tries++) {
+    for (let tries = 0; tries < ROOM_BUILDER_RETRIES; tries++) {
       let variant = PRNG.element(rng, this.variants);
 
       // Orientation doesn't matter for some room builders
@@ -149,33 +157,15 @@ export class RoomBuilder {
         }
       }
 
-      // Pick a random point to be the top left of the template
+      // Pick a random point to be the top left of the template, ensuring
+      // that it is inside the bounds of the level.
       let origin = Point.from(
         PRNG.int(rng, 0, level.width - variant.width),
         PRNG.int(rng, 0, level.height - variant.height)
       );
 
-      // TODO: we can probably get a performance boost here by picking one of the cells
-      // with a constraint and trying it there in different orientations.
-
-      // Check whether we'd be building over any finalised cells (e.g. exit tiles)
-      for (let x = origin.x; x < variant.width; x++) {
-        for (let y = origin.y; y < variant.height; y++) {
-          let pos = Point.from(x, y);
-          let cell = Array2D.get(variant, x, y);
-
-          // Check whether the cell will actually build anything here
-          let willBuild = cell && (cell.spawn || cell.substance || cell.tile);
-
-          if (willBuild && finalised.has(pos)) {
-            debug(this.id, "overlaps finalized tiles");
-            continue retry;
-          }
-        }
-      }
-
       // Check whether the template would violate any tile constraints
-      if (this.checkConstraints(level, origin, variant) === false) {
+      if (this.checkRules(level, origin, finalised, variant) === false) {
         debug("constraints check failed", this.id);
         continue;
       }
@@ -262,9 +252,6 @@ export function getRoomBuildersByType(levelType: LevelType) {
   });
 }
 
-// TODO: This is two things, mixed up
-// Separate out into a digger/terrain builder and a level builder
-// The build() method basically needs to be its own class
 export class LevelBuilder {
   private static rng = PRNG.generator(0);
 
@@ -300,7 +287,7 @@ export class LevelBuilder {
   }
 
   levelType: LevelType;
-  map: TileMarker[] = [];
+  map: Uint8Array;
   width: number;
   height: number;
   rng: PRNG.RNG;
@@ -309,19 +296,9 @@ export class LevelBuilder {
     this.levelType = levelType;
     this.width = width;
     this.height = height;
+    this.map = new Uint8Array(width * height);
     this.rng = PRNG.generator(seed);
-
-    for (let { x, y } of this.points()) {
-      this.map[x + y * width] = TileMarker.Floor;
-    }
-  }
-
-  private *points() {
-    for (let x = 0; x < this.width; x++) {
-      for (let y = 0; y < this.height; y++) {
-        yield Point.from(x, y);
-      }
-    }
+    this.map.fill(TileMarker.Floor);
   }
 
   get(x: number, y: number): TileMarker | undefined {
@@ -475,32 +452,36 @@ export class LevelBuilder {
     iterations?: number;
     outOfBoundsMarker?: TileMarker
   }) {
+    let nextMap = new Uint8Array(this.map.length);
+
     for (let i = 0; i < iterations; i++) {
-      let map: TileMarker[] = [];
+      for (let y = 0; y < this.height; y++) {
+        for (let x = 0; x < this.width; x++) {
+          let tile = this.get(x, y);
+          if (tile == null) continue;
 
-      for (let { x, y } of this.points()) {
-        let tile = this.get(x, y);
-        if (tile == null) continue;
+          let neighbours = Point.mooreNeighbours({ x, y });
 
-        let neighbours = Point.mooreNeighbours({ x, y });
+          let score = neighbours.filter(n => {
+            let neighbour = this.get(n.x, n.y) ?? outOfBoundsMarker;
+            return neighbour === TileMarker.Wall;
+          }).length;
 
-        let score = neighbours.filter(n => {
-          let neighbour = this.get(n.x, n.y) ?? outOfBoundsMarker;
-          return neighbour === TileMarker.Wall;
-        }).length;
+          let [birth, survival] = rules;
 
-        let [birth, survival] = rules;
+          if (tile === TileMarker.Wall && !survival.includes(score)) {
+            tile = TileMarker.Floor;
+          } else if (tile === TileMarker.Floor && birth.includes(score)) {
+            tile = TileMarker.Wall;
+          }
 
-        if (tile === TileMarker.Wall && !survival.includes(score)) {
-          tile = TileMarker.Floor;
-        } else if (tile === TileMarker.Floor && birth.includes(score)) {
-          tile = TileMarker.Wall;
+          nextMap[x + y * this.width] = tile;
         }
-
-        map[x + y * this.width] = tile;
       }
 
-      this.map = map;
+      let temp = nextMap;
+      nextMap = this.map;
+      this.map = temp;
     }
 
     return this;
@@ -526,10 +507,12 @@ export class LevelBuilder {
   }
 
   noise(bias: number = 0.5) {
-    for (let { x, y } of this.points()) {
-      this.map[x + y * this.width] = PRNG.chance(this.rng, bias)
-        ? TileMarker.Wall
-        : TileMarker.Floor;
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        this.map[x + y * this.width] = PRNG.chance(this.rng, bias)
+          ? TileMarker.Wall
+          : TileMarker.Floor;
+      }
     }
 
     return this;
@@ -542,70 +525,88 @@ export class LevelBuilder {
     };
   }
 
-  private getDijkstraMap(start: Point.Point) {
-    return dijkstra(
-      this.width,
-      this.height,
-      start,
-      (_, next) => this.get(next.x, next.y) === TileMarker.Floor ? 1 : Infinity,
-      Point.vonNeumannNeighbours,
-    );
+  build(constraints: Partial<LevelConstraints>): Level {
+    let level = new Level(this.levelType, this.width, this.height);
+
+    // Convert the tile markers into actual tiles
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        let mark = this.get(x, y)!;
+        let type = mark === TileMarker.Wall
+          ? level.type.characteristics.defaultWallTile
+          : level.type.characteristics.defaultFloorTile;
+        let tile = new Tile(type);
+        level.setTile(x, y, tile);
+      }
+    }
+
+    let decorator = new LevelDecorator(level, constraints, this.rng);
+    return decorator.finalise();
+  }
+}
+
+export class LevelDecorator {
+  level: Level;
+  rng: PRNG.RNG;
+  finalised = new PointSet();
+  constraints: LevelConstraints;
+
+  constructor(level: Level, constraints: Partial<LevelConstraints>, rng: PRNG.RNG) {
+    this.level = level;
+    this.rng = rng;
+    this.constraints = { ...defaultLevelConstraints, ...constraints };
+  }
+
+  private randomCell(): Point.Point {
+    return {
+      x: PRNG.int(this.rng, 0, this.level.width),
+      y: PRNG.int(this.rng, 0, this.level.height),
+    };
   }
 
   private findOpenCenter(): Point.Point {
-    let points = Array.from(this.points());
+    let points = this.level.points();
 
     return minBy(points, ({ x, y }) => {
-      let marker = this.get(x, y);
-      if (marker !== TileMarker.Floor) return Infinity;
-      let cx = Math.ceil(x - this.width / 2);
-      let cy = Math.ceil(y - this.height / 2);
+      let tile = this.level.getTile(x, y);
+      if (tile == null || !tile.type.walkable) return Infinity;
+      let cx = Math.ceil(x - this.level.width / 2);
+      let cy = Math.ceil(y - this.level.height / 2);
       return Math.abs(cx) + Math.abs(cy);
     });
   }
 
-  private findEntranceAndExit() {
+  addEntranceAndExit() {
     let center = this.findOpenCenter();
-    let centerMap = this.getDijkstraMap(center);
-    let points = Array.from(this.points());
+    let centerMap = this.level.getDijkstraMap(center);
+    let points = Array.from(this.level.points());
     let entrance = maxBy(points, pos => centerMap.finiteDistanceTo(pos));
-    let entranceMap = this.getDijkstraMap(entrance);
+    let entranceMap = this.level.getDijkstraMap(entrance);
     let exit = maxBy(points, pos => entranceMap.finiteDistanceTo(pos));
 
-    return {
-      entrance,
-      exit,
-    }
-  }
-
-  build(_constraints: Partial<LevelConstraints>): Level {
-    let constraints = { ...defaultLevelConstraints, ..._constraints };
-
-    let level = new Level(this.levelType, this.width, this.height);
-    let finalised = new PointSet();
-
-    let { entrance, exit } = this.findEntranceAndExit();
-    level.entrance = entrance;
-    level.exit = exit;
+    this.level.entrance = entrance;
+    this.level.exit = exit;
 
     // Prevent building over the entrances/exits
-    finalised.add(level.entrance);
-    finalised.add(level.exit);
+    this.finalised.add(this.level.entrance);
+    this.finalised.add(this.level.exit);
 
-    // TODO: Restrict all tiles on the shortest path from entrance to exit?
+    // Insert the door tiles
+    let door = new Tile(Tiles.Doorway);
 
-    // Convert the tile markers into actual tiles
-    for (let { x, y } of this.points()) {
-      let mark = this.get(x, y)!;
-      let type = mark === TileMarker.Wall
-        ? level.type.characteristics.defaultWallTile
-        : level.type.characteristics.defaultFloorTile;
-      let tile = new Tile(type);
-      level.setTile(x, y, tile);
-    }
+    door.onEnter = entity => {
+      if (entity === game.player) {
+        let level = LevelBuilder.build(this.level.type);
+        game.setLevel(level);
+      }
+    };
 
+    this.level.setTile(exit.x, exit.y, door);
+  }
+
+  addRooms() {
     // Create a queue of rooms that we can build in this level type
-    let roomBuilderQueue = getRoomBuildersByType(this.levelType);
+    let roomBuilderQueue = getRoomBuildersByType(this.level.type);
 
     // Prevent room selection bias
     PRNG.shuffle(this.rng, roomBuilderQueue);
@@ -628,7 +629,7 @@ export class LevelBuilder {
         continue;
       }
 
-      let built = roomBuilder.tryToBuild(level, finalised, this.rng);
+      let built = roomBuilder.tryToBuild(this.level, this.finalised, this.rng);
 
       if (built) {
         budget -= roomBuilder.options.cost;
@@ -646,7 +647,9 @@ export class LevelBuilder {
         break;
       }
     }
+  }
 
+  addEntities() {
     // Generate a random number of entities in the level
     let spawnCount = PRNG.int(this.rng, 0, 4);
     let spawned: Entity[] = [];
@@ -659,40 +662,43 @@ export class LevelBuilder {
       let pos = this.randomCell();
 
       // Don't spawn entities into features that have been finalised
-      if (finalised.has(pos)) continue;
+      if (this.finalised.has(pos)) continue;
 
-      let tile = level.getTile(pos.x, pos.y);
+      let tile = this.level.getTile(pos.x, pos.y);
       if (tile == null || !tile.type.walkable) continue;
-      let entities = level.getEntitiesAt(pos.x, pos.y);
+      let entities = this.level.getEntitiesAt(pos.x, pos.y);
       if (entities.length > 0) continue;
 
       let uncommon = PRNG.chance(this.rng, CHANCE_UNCOMMON);
       let rare = PRNG.chance(this.rng, CHANCE_RARE);
-      let types = level.type.characteristics.commonEntityTypes;
+      let types = this.level.type.characteristics.commonEntityTypes;
 
       if (rare) {
-        types = level.type.characteristics.rareEntityTypes;
+        types = this.level.type.characteristics.rareEntityTypes;
       } else if (uncommon) {
-        types = level.type.characteristics.uncommonEntityTypes;
+        types = this.level.type.characteristics.uncommonEntityTypes;
       }
 
       let entityType = PRNG.element(this.rng, types);
       let entity = new entityType();
       entity.pos = Point.clone(pos);
-      level.addEntity(entity);
+      this.level.addEntity(entity);
       spawned.push(entity);
     }
+  }
 
-    // Test this level against our constraints
-    let map = level.getDijkstraMap(level.entrance);
-    let criticalPathLength = map.distanceTo(level.exit);
+  checkConstraints() {
+    let { constraints } = this;
+
+    let map = this.level.getDijkstraMap(this.level.entrance);
+    let criticalPathLength = map.distanceTo(this.level.exit);
 
     if (criticalPathLength === Infinity) {
       throw new ConstraintError("Exit is not accessible");
     }
 
     let accessibleTilesCount = map.costSoFar.data.filter(isFinite).length;
-    let accessibleTilePercent = accessibleTilesCount / (this.width * this.height);
+    let accessibleTilePercent = accessibleTilesCount / (this.level.width * this.level.height);
 
     if (accessibleTilePercent < constraints.minAccessibleTilesPercent) {
       throw new ConstraintError("Not enough accessible tiles");
@@ -705,20 +711,19 @@ export class LevelBuilder {
     } else if (criticalPathLength > constraints.maxCriticalPathLength) {
       throw new ConstraintError("Critical path is too long");
     }
+  }
 
-    // All seems good, insert the doors and let's go.
+  addFissures() {
 
-    let door = new Tile(Tiles.Doorway);
+  }
 
-    door.onEnter = entity => {
-      if (entity === game.player) {
-        let level = LevelBuilder.build(this.levelType);
-        game.setLevel(level);
-      }
-    };
-
-    level.setTile(level.exit.x, level.exit.y, door);
-
-    return level;
+  finalise() {
+    // TODO: Restrict all tiles on the critical path from entrance to exit?
+    this.addEntranceAndExit();
+    this.addRooms();
+    this.addEntities();
+    this.addFissures();
+    this.checkConstraints();
+    return this.level;
   }
 }

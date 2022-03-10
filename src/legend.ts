@@ -3,7 +3,7 @@ import * as Entities from "./entities";
 import { Entity, Level, Substance, Tile, TileType } from "./game";
 import * as Tiles from "./tiles";
 
-export type TileConstraint = (tile: Tile, level: Level) => boolean;
+export type TileRule = (tile: Tile, level: Level) => boolean;
 
 export type CreateTile =
   | TileType
@@ -19,12 +19,14 @@ export interface CellBuilder {
   key?: string;
   tile?: CreateTile;
   spawn?: CreateEntity;
-  constraint?: TileConstraint;
+  rule?: TileRule;
   substance?: CreateSubstance;
 }
 
+export type LegendEntry = Omit<CellBuilder, "key">;
+
 export interface Legend {
-  [key: string]: Omit<CellBuilder, "key">;
+  [key: string]: LegendEntry;
 }
 
 export const getDefaultFloor: CreateTile = level =>
@@ -36,10 +38,10 @@ export const getDefaultWall: CreateTile = level =>
 export const getOrganicFloor: CreateTile = level =>
   RNG.item(Tiles.Grass);
 
-export const isWalkable: TileConstraint = tile =>
+export const isWalkable: TileRule = tile =>
   tile.type.walkable;
 
-export const isDefaultWall: TileConstraint = (tile, level) =>
+export const isDefaultWall: TileRule = (tile, level) =>
   tile.type === level.type.characteristics.defaultWallTile;
 
 export const getCommonEntity: CreateEntity = level =>
@@ -68,40 +70,40 @@ export const defaultLegend: Legend = {
     tile: getOrganicFloor,
   },
   "+": {
-    constraint: isWalkable,
+    rule: isWalkable,
   },
   "#": {
     tile: getDefaultWall,
   },
   ",": {
     tile: getDefaultFloor,
-    constraint: isWalkable,
+    rule: isWalkable,
   },
   "%": {
-    constraint: isDefaultWall,
+    rule: isDefaultWall,
   },
   "$": {
     tile: getDefaultFloor,
     spawn: () => new Entities.Chest(),
   },
   "?": {
-    constraint: isWalkable,
+    rule: isWalkable,
     spawn: getRandomEntity,
   },
   "C": {
-    constraint: isWalkable,
+    rule: isWalkable,
     spawn: getCommonEntity,
   },
   "B": {
-    constraint: isWalkable,
+    rule: isWalkable,
     spawn: getUncommonEntity,
   },
   "A": {
-    constraint: isWalkable,
+    rule: isWalkable,
     spawn: getRareEntity,
   },
   "X": {
-    constraint: tile => tile.type === Tiles.Doorway,
+    rule: tile => tile.type === Tiles.Doorway,
   },
   "L": {
     tile: getDefaultFloor,
@@ -113,6 +115,9 @@ export const defaultLegend: Legend = {
   },
   "o": {
     tile: getObstacleTile,
+  },
+  "=": {
+    tile: Tiles.IronBars,
   },
   "^": {
     tile: Tiles.Fissure,

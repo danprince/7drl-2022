@@ -35,7 +35,7 @@ export let Mantle = new LevelType({
   characteristics: {
     defaultFloorTile: Tiles.VolcanicFloor,
     defaultWallTile: Tiles.VolcanicWall,
-    commonEntityTypes: [Entities.Maguana, Entities.Mantleshell],
+    commonEntityTypes: [Entities.Maguana, Entities.Mantleshell, Entities.Gnome],
     uncommonEntityTypes: [Entities.Boulder],
     rareEntityTypes: [Entities.Krokodil],
     decorativeEntityTypes: [Entities.Thwomp],
@@ -43,11 +43,16 @@ export let Mantle = new LevelType({
   },
   build(builder) {
     return builder
-      .fill(TileMarker.Floor)
+      .noise(RNG.float(0.3, 0.5))
       .addPerimeterWall()
+      .cellularAutomata({
+        iterations: 20,
+        rules: [[5, 6, 7, 8], [3, 4, 5, 6, 7, 8]],
+        outOfBoundsMarker: TileMarker.Wall,
+      })
       .build({
         minAccessibleTilesPercent: 0,
-        minCriticalPathLength: 1,
+        minCriticalPathLength: 20,
       });
   },
 });

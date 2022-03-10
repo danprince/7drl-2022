@@ -209,7 +209,7 @@ export class Siphon extends Vestige {
       let neighbour = game.level.getTile(x, y);
 
       if (neighbour && neighbour.type === Tiles.Fissure) {
-        neighbour.type.onEnter(this.owner, neighbour);
+        neighbour.type.onEnter(neighbour, this.owner);
       }
     }
   }

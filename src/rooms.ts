@@ -39,7 +39,7 @@ export let JailCell = new RoomBuilder("jail-cell", [`
   legend: {
     "=": {
       tile: Tiles.IronBars,
-      constraint: tile => tile.type.walkable,
+      rule: tile => tile.type.walkable,
     },
   },
 });
@@ -67,9 +67,9 @@ export let MountedBallista = new RoomBuilder("mounted-ballista", [`
 export let SnakePit = new RoomBuilder("snake-pit", [`
 .........
 .#~~.~#..
-#~~s~~~#.
-#~~~$~s~.
-.#~s~~~#.
+#~~s~e~#.
+#~e~$~s~.
+.#~se~~#.
 .#~~.~#s.
 ..#......
 `], {
@@ -83,6 +83,11 @@ export let SnakePit = new RoomBuilder("snake-pit", [`
       tile: Legend.getDefaultFloor,
       substance: () => new Substances.Slime(Infinity),
       spawn: () => new Entities.Snake(),
+    },
+    "e": {
+      tile: Legend.getDefaultFloor,
+      substance: () => new Substances.Slime(Infinity),
+      spawn: () => new Entities.SnakeEgg(),
     },
   },
 });
