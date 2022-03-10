@@ -10,7 +10,7 @@ export let PrimordialCaverns = new LevelType({
     defaultFloorTile: Tiles.Floor,
     defaultWallTile: Tiles.Wall,
     commonEntityTypes: [Entities.Stoneshell, Entities.Skeleton],
-    uncommonEntityTypes: [Entities.Boar],
+    uncommonEntityTypes: [Entities.Boar, Entities.Worm],
     rareEntityTypes: [Entities.FossilKnight],
     decorativeEntityTypes: [Entities.MushroomBolete],
     obstacleTiles: [Tiles.Stalagmite],
@@ -26,6 +26,28 @@ export let PrimordialCaverns = new LevelType({
       .build({
         minAccessibleTilesPercent: 0.4,
         minCriticalPathLength: 30,
+      });
+  },
+});
+
+export let Mantle = new LevelType({
+  name: "Mantle",
+  characteristics: {
+    defaultFloorTile: Tiles.VolcanicFloor,
+    defaultWallTile: Tiles.VolcanicWall,
+    commonEntityTypes: [Entities.Maguana, Entities.Mantleshell],
+    uncommonEntityTypes: [Entities.Boulder],
+    rareEntityTypes: [Entities.Krokodil],
+    decorativeEntityTypes: [Entities.Thwomp],
+    obstacleTiles: [Tiles.Stalagmite],
+  },
+  build(builder) {
+    return builder
+      .fill(TileMarker.Floor)
+      .addPerimeterWall()
+      .build({
+        minAccessibleTilesPercent: 0,
+        minCriticalPathLength: 1,
       });
   },
 });

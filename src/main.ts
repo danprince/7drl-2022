@@ -36,7 +36,7 @@ async function start() {
   LevelBuilder.setSeed(seed);
 
   let game = window.game = new Game();
-  let level = LevelBuilder.build(Levels.PrimordialCaverns);
+  let level = LevelBuilder.build(Levels.Mantle);
 
   let player = new Player();
   player.setAbility(new Abilities.Dart());

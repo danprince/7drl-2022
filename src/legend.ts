@@ -114,6 +114,9 @@ export const defaultLegend: Legend = {
   "o": {
     tile: getObstacleTile,
   },
+  "^": {
+    tile: Tiles.Fissure,
+  },
   "P": {
     // TODO: Pressure plate
   },

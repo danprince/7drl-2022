@@ -1,4 +1,4 @@
-import { Array2D, Point, RNG, Direction, PRNG } from "silmarils";
+import { Array2D, Point, Direction, PRNG } from "silmarils";
 import { Entity, Level, LevelType, Substance, Tile, TileType } from "./game";
 import { assert, dijkstra, directionToGridVector, maxBy, minBy, PointSet } from "./helpers";
 import * as Legend from "./legend";
@@ -6,7 +6,7 @@ import * as Tiles from "./tiles";
 
 export const CHANCE_UNCOMMON = 0.25;
 export const CHANCE_RARE = 0.05;
-const LEVEL_BUILDER_RETRIES = 1000;
+const LEVEL_BUILDER_RETRIES = 100;
 const ROOM_BUILDER_RETRIES = 100;
 
 export enum Rarity {
@@ -73,9 +73,11 @@ export interface RoomBuilderOptions {
   afterBuild(context: RoomBuilderContext): void;
 }
 
+export type RoomVariantBuilder = Array2D.Array2D<Legend.CellBuilder>;
+
 export class RoomBuilder {
   id: string;
-  cells: Array2D.Array2D<Legend.CellBuilder>;
+  variants: RoomVariantBuilder[] = [];
 
   options: RoomBuilderOptions = {
     rotates: true,
@@ -88,32 +90,38 @@ export class RoomBuilder {
 
   constructor(
     id: string,
-    template: string,
+    templates: string[],
     options: Partial<RoomBuilderOptions> = {},
   ) {
     this.id = id;
     this.options = { ...this.options, ...options };
 
-    let map = Array2D.fromString(template);
+    this.variants = templates.map(template => {
+      let map = Array2D.fromString(template);
 
-    this.cells = Array2D.map(map, key => {
-      let entry = (
-        this.options.legend[key] ||
-        Legend.defaultLegend[key]
-      );
+      return Array2D.map(map, key => {
+        let entry = (
+          this.options.legend[key] ||
+          Legend.defaultLegend[key]
+        );
 
-      return { key, ...entry };
+        return { key, ...entry };
+      });
     });
   }
 
-  checkConstraints(level: Level, origin: Point.Point): boolean {
+  checkConstraints(
+    level: Level,
+    origin: Point.Point,
+    variant: RoomVariantBuilder,
+  ): boolean {
     // TODO: Need some way for a tile constraint to require that it is accessible
     // from a certain point etc
 
     // TODO: Silmarils needs an iterator for array 2d
-    for (let x = 0; x < this.cells.width; x++) {
-      for (let y = 0; y < this.cells.height; y++) {
-        let cell = Array2D.get(this.cells, x, y)!;
+    for (let x = 0; x < variant.width; x++) {
+      for (let y = 0; y < variant.height; y++) {
+        let cell = Array2D.get(variant, x, y)!;
         let tile = level.getTile(origin.x + x, origin.y + y);
         if (tile == null) continue;
         if (cell.constraint && !cell.constraint(tile, level)) {
@@ -131,55 +139,66 @@ export class RoomBuilder {
     rng: PRNG.RNG,
   ) {
     retry: for (let tries = 0; tries < ROOM_BUILDER_RETRIES; tries++) {
+      let variant = PRNG.element(rng, this.variants);
+
       // Orientation doesn't matter for some room builders
       if (this.options.rotates) {
-        if (PRNG.chance(rng, 0.5)) {
-          this.cells = Array2D.rotateLeft90(this.cells);
+        let rotations = PRNG.int(rng, 0, 3);
+        for (let i = 0; i < rotations; i++) {
+          variant = Array2D.rotateLeft90(variant);
         }
       }
 
       // Pick a random point to be the top left of the template
       let origin = Point.from(
-        PRNG.int(rng, 0, level.width - this.cells.width),
-        PRNG.int(rng, 0, level.height - this.cells.height)
+        PRNG.int(rng, 0, level.width - variant.width),
+        PRNG.int(rng, 0, level.height - variant.height)
       );
 
+      // TODO: we can probably get a performance boost here by picking one of the cells
+      // with a constraint and trying it there in different orientations.
+
       // Check whether we'd be building over any finalised cells (e.g. exit tiles)
-      for (let x = origin.x; x < this.cells.width; x++) {
-        for (let y = origin.y; y < this.cells.height; y++) {
+      for (let x = origin.x; x < variant.width; x++) {
+        for (let y = origin.y; y < variant.height; y++) {
           let pos = Point.from(x, y);
-          let cell = Array2D.get(this.cells, x, y);
+          let cell = Array2D.get(variant, x, y);
 
           // Check whether the cell will actually build anything here
           let willBuild = cell && (cell.spawn || cell.substance || cell.tile);
 
           if (willBuild && finalised.has(pos)) {
-            debug("violated tile restrictions", this.id);
+            debug(this.id, "overlaps finalized tiles");
             continue retry;
           }
         }
       }
 
       // Check whether the template would violate any tile constraints
-      if (this.checkConstraints(level, origin) === false) {
+      if (this.checkConstraints(level, origin, variant) === false) {
         debug("constraints check failed", this.id);
         continue;
       }
 
-      this.build(level, origin, finalised);
+      this.build(level, origin, finalised, variant);
       return true;
     }
 
     return false;
   }
 
-  build(level: Level, origin: Point.Point, finalised: PointSet) {
+  build(
+    level: Level,
+    origin: Point.Point,
+    finalised: PointSet,
+    variant: RoomVariantBuilder
+  ) {
     let context = new RoomBuilderContext();
 
-    for (let x = 0; x < this.cells.width; x++) {
-      for (let y = 0; y < this.cells.height; y++) {
+    for (let x = 0; x < variant.width; x++) {
+      for (let y = 0; y < variant.height; y++) {
         let pos = Point.translated(origin, [x, y]);
-        let cell = Array2D.get(this.cells, x, y)!;
+        let cell = Array2D.get(variant, x, y)!;
 
         if (cell.tile || cell.substance || cell.spawn) {
           finalised.add(pos);
@@ -629,11 +648,18 @@ export class LevelBuilder {
     }
 
     // Generate a random number of entities in the level
-    let spawnCount = PRNG.int(this.rng, 0, 10);
+    let spawnCount = PRNG.int(this.rng, 0, 4);
     let spawned: Entity[] = [];
+    let tries = 0;
 
     while (spawned.length < spawnCount) {
+      // Bail out if we're struggling
+      if (tries++ > 10) break;
+
       let pos = this.randomCell();
+
+      // Don't spawn entities into features that have been finalised
+      if (finalised.has(pos)) continue;
 
       let tile = level.getTile(pos.x, pos.y);
       if (tile == null || !tile.type.walkable) continue;

@@ -261,7 +261,7 @@ function isVariantGlyph(glyph: Glyph | VariantGlyph): glyph is VariantGlyph {
 }
 
 type TileTypeProps = {
-  walkable: TileType["walkable"];
+  walkable?: TileType["walkable"];
   glyph: TileType["glyph"];
   autotiling?: TileType["autotiling"];
   diggable?: TileType["diggable"];
@@ -279,7 +279,7 @@ export class TileType extends EventHandler {
     super();
     this.glyph = props.glyph;
     this.autotiling = props.autotiling;
-    this.walkable = props.walkable;
+    this.walkable = props.walkable || false;
     this.diggable = props.diggable || false;
     this.onEnter = props.onEnter ? props.onEnter : this.onEnter;
     this.onUpdate = props.onUpdate ? props.onUpdate : this.onUpdate;

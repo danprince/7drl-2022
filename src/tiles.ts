@@ -21,7 +21,6 @@ export let Grass = new TileType({
 });
 
 export let Wall = new TileType({
-  walkable: false,
   diggable: true,
   glyph: {
     char: Chars.BoneWalls,
@@ -30,7 +29,6 @@ export let Wall = new TileType({
 });
 
 export let Block = new TileType({
-  walkable: false,
   diggable: true,
   glyph: {
     char: Chars.Blocks,
@@ -39,7 +37,6 @@ export let Block = new TileType({
 });
 
 export let Stalagmite = new TileType({
-  walkable: false,
   diggable: true,
   glyph: {
     char: [Chars.Stalagmite],
@@ -48,13 +45,10 @@ export let Stalagmite = new TileType({
 });
 
 export let IronBars = new TileType({
-  walkable: false,
-  diggable: false,
   glyph: Glyph(Chars.Bars, Colors.Grey4),
 });
 
 export let Bones = new TileType({
-  walkable: false,
   glyph: {
     char: [Chars.Ribs, Chars.Bone],
     fg: [Colors.Grey4, Colors.Grey3],
@@ -79,5 +73,21 @@ export let Fissure = new TileType({
         game.player.addStatus(new Molten);
       }
     }
+  },
+});
+
+export let VolcanicFloor = new TileType({
+  walkable: true,
+  glyph: {
+    char: Chars.Diagonals,
+    fg: [Colors.Orange1],
+  },
+});
+
+export let VolcanicWall = new TileType({
+  diggable: true,
+  glyph: {
+    char: Chars.Walls,
+    fg: [Colors.Orange2],
   },
 });

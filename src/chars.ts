@@ -87,6 +87,7 @@ export const Chars = {
   Stalagmite: "\xdb",
   Diagonals: createCharSet(0xc8, 2),
   Cobbles: createCharSet(0xc4, 4),
+  Walls: createCharSet(0xd0, 4),
   BoneWalls: createCharSet(0xd0, 11),
   Flagstones: createCharSet(0xdb, 5),
   BoxDrawing: createCharSet(0xe0, 16),

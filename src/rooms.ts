@@ -7,14 +7,14 @@ import * as Levels from "./levels";
 import * as Substances from "./substances";
 import * as Legend from "./legend";
 
-export let RollingBoulder = new RoomBuilder("rolling-boulder", `
+export let RollingBoulder = new RoomBuilder("rolling-boulder", [`
 +++
 +O+
 *.*
 *.*
 *.*
 *L*
-`, {
+`], {
   levelTypes: [Levels.PrimordialCaverns],
   rarity: Rarity.Uncommon,
   afterBuild(ctx) {
@@ -31,13 +31,11 @@ export let RollingBoulder = new RoomBuilder("rolling-boulder", `
   }
 });
 
-export let JailCell = new RoomBuilder("jail-cell", `
-#%%%#
-#...#
-#.?.#
-#...#
-##=##
-`, {
+export let JailCell = new RoomBuilder("jail-cell", [`
+#%#
+#?#
+#=#
+`], {
   legend: {
     "=": {
       tile: Tiles.IronBars,
@@ -46,11 +44,18 @@ export let JailCell = new RoomBuilder("jail-cell", `
   },
 });
 
-export let MountedBallista = new RoomBuilder("mounted-ballista", `
+export let VolcanicPit = new RoomBuilder("volcanic-pit", [`
+^.^
+...
+^.^
+...
+`]);
+
+export let MountedBallista = new RoomBuilder("mounted-ballista", [`
 +++
 +B+
 +++
-`, {
+`], {
   rarity: Rarity.Rare,
   legend: {
     "B": {
@@ -59,15 +64,7 @@ export let MountedBallista = new RoomBuilder("mounted-ballista", `
   },
 });
 
-export let SealedVault = new RoomBuilder("sealed-vault", `
-.###.
-##$##
-.###.
-`, {
-  levelTypes: [Levels.PrimordialCaverns],
-});
-
-export let SnakePit = new RoomBuilder("snake-pit", `
+export let SnakePit = new RoomBuilder("snake-pit", [`
 .........
 .#~~.~#..
 #~~s~~~#.
@@ -75,7 +72,7 @@ export let SnakePit = new RoomBuilder("snake-pit", `
 .#~s~~~#.
 .#~~.~#s.
 ..#......
-`, {
+`], {
   rarity: Rarity.Uncommon,
   legend: {
     "~": {
@@ -90,7 +87,7 @@ export let SnakePit = new RoomBuilder("snake-pit", `
   },
 });
 
-export let Monolith = new RoomBuilder("monolith", `
+export let Monolith = new RoomBuilder("monolith", [`
 **...**
 *..#..*
 ..###..
@@ -98,29 +95,37 @@ export let Monolith = new RoomBuilder("monolith", `
 ..###..
 *..#..*
 **...**
-`, {
+`], {
   rarity: Rarity.Common,
 });
 
-export let OpenVault = new RoomBuilder("open-vault", `
+export let SealedVault = new RoomBuilder("sealed-vault", [`
+.###.
+##$##
+.###.
+`], {
+  levelTypes: [Levels.PrimordialCaverns],
+});
+
+export let OpenVault = new RoomBuilder("open-vault", [`
 #%%%%%#
 ##...##
 #..$..#
 ##...##
 ###.###
 **.+.**
-`, {
-  rarity: Rarity.Common,
+`], {
+  rarity: Rarity.Rare,
 });
 
-export let MushroomCave = new RoomBuilder("mushroom-cave", `
+export let MushroomCave = new RoomBuilder("mushroom-cave", [`
 #%%%%%#
 ##"m.##
 #m.o"m#
 ##..m##
 ###"###
 **.+.**
-`, {
+`], {
   rarity: Rarity.Uncommon,
   legend: {
     "m": {
