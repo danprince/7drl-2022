@@ -1,4 +1,4 @@
-import { Array2D, Point, Direction, PRNG } from "silmarils";
+import { Array2D, Point, Direction, PRNG, RNG } from "silmarils";
 import { Entity, Level, LevelType, Substance, Tile, TileType } from "./game";
 import { assert, directionToGridVector, maxBy, minBy, PointSet } from "./helpers";
 import * as Legend from "./legend";
@@ -116,9 +116,9 @@ export class RoomBuilder {
     finalised: PointSet,
     variant: RoomVariantBuilder,
   ): boolean {
-    for (let x = origin.x; x < variant.width; x++) {
-      for (let y = origin.y; y < variant.height; y++) {
-        let pos = Point.from(x, y);
+    for (let x = 0; x < variant.width; x++) {
+      for (let y = 0; y < variant.height; y++) {
+        let pos = Point.translated(origin, [x, y]);
         let cell = Array2D.get(variant, x, y);
 
         // Check whether the cell will actually build anything here
@@ -129,7 +129,7 @@ export class RoomBuilder {
           return false;
         }
 
-        let tile = level.getTile(origin.x + x, origin.y + y);
+        let tile = level.getTile(pos.x, pos.y);
         if (tile == null) continue;
 
         if (!cell?.rule?.(tile, level)) {
@@ -604,6 +604,17 @@ export class LevelDecorator {
     this.level.setTile(exit.x, exit.y, door);
   }
 
+  roll(rarity: Rarity) {
+    switch (rarity) {
+      case Rarity.Uncommon:
+        return PRNG.chance(this.rng, CHANCE_UNCOMMON);
+      case Rarity.Rare:
+        return PRNG.chance(this.rng, CHANCE_RARE);
+      default:
+        return true;
+    }
+  }
+
   addRooms() {
     // Create a queue of rooms that we can build in this level type
     let roomBuilderQueue = getRoomBuildersByType(this.level.type);
@@ -615,13 +626,8 @@ export class LevelDecorator {
 
     while (roomBuilderQueue.length) {
       let roomBuilder = roomBuilderQueue.shift()!;
-      let { rarity } = roomBuilder.options;
 
-      if (rarity === Rarity.Uncommon && !PRNG.chance(this.rng, CHANCE_UNCOMMON)) {
-        continue;
-      }
-
-      if (rarity === Rarity.Rare && !PRNG.chance(this.rng, CHANCE_RARE)) {
+      if (!this.roll(roomBuilder.options.rarity)) {
         continue;
       }
 
@@ -635,15 +641,18 @@ export class LevelDecorator {
         budget -= roomBuilder.options.cost;
       }
 
-      if (rarity === Rarity.Common) {
+      if (RNG.chance(0.5)) {
+        debug("Chance to rebuild");
         roomBuilderQueue.push(roomBuilder);
       }
 
-      if (budget < 10) {
+      if (budget <= 10) {
+        debug("Used up the budget!");
         break;
       }
 
       if (roomBuilderQueue.length === 0) {
+        debug("Ran out of rooms");
         break;
       }
     }
