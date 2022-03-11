@@ -56,7 +56,7 @@ export class ExitLevelEvent extends GameEvent {
 
   dispatch() {
     this.sendTo(game.player);
-    this.sendTo(game);
+   this.sendTo(game);
   }
 }
 

@@ -213,3 +213,31 @@ export function minBy<T>(items: T[], getScore: (item: T) => number): T {
 
   return best;
 }
+
+// TODO: Stamp should probably be array2d then they can be rotated
+export function createStamp(pattern: string): Point.Point[] {
+  let cells = Array2D.fromString(pattern);
+  let origin: Point.Point = Point.ORIGIN;
+
+  for (let x = 0; x < cells.width; x++) {
+    for (let y = 0; y < cells.height; y++) {
+      if (Array2D.get(cells, x, y) === "@") {
+        origin = { x, y };
+        break;
+      }
+    }
+  }
+
+  let center = Point.floored({ x: cells.width / 2, y: cells.height / 2 });
+  let stamp: Point.Point[] = [];
+
+  for (let x = 0; x < cells.width; x++) {
+    for (let y = 0; y < cells.height; y++) {
+      if (Array2D.get(cells, x, y) !== ".") {
+        stamp.push({ x: x - center.x, y: y - center.y });
+      }
+    }
+  }
+
+  return stamp;
+}

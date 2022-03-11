@@ -28,7 +28,7 @@ export class Blowpipe extends Ability {
   onHitEntities(entities: Entity[], vec: Vector.Vector): boolean {
     for (let entity of entities) {
       game.player.attack(entity, {
-        type: DamageType.Misc,
+        type: DamageType.Generic,
         amount: 1,
         direction: vec,
       });
@@ -68,6 +68,8 @@ export class Blowpipe extends Ability {
     while (true) {
       Point.translate(pos, vec);
 
+      yield 1;
+
       // Check whether the projectile is stopped by a tile
       let tile = game.level.getTile(pos.x, pos.y);
 
@@ -87,9 +89,6 @@ export class Blowpipe extends Ability {
           break;
         }
       }
-
-      // Otherwise just keep moving
-      yield 1;
     }
 
     done();
@@ -163,7 +162,8 @@ export class Grapple extends Ability {
       Point.translate(pos, vec);
 
       let tile = game.level.getTile(pos.x, pos.y);
-      if (tile && tile.type.walkable === false) {
+
+      if (tile && !tile.type.flyable && !tile.type.walkable) {
         return tile;
       }
 
@@ -178,11 +178,44 @@ export class Grapple extends Ability {
     }
   }
 
+  getDirectionalChar(direction: Direction.Direction) {
+    switch (direction) {
+      case Direction.NORTH:
+      case Direction.SOUTH:
+        return "|";
+      case Direction.EAST:
+      case Direction.WEST:
+        return "-";
+      case Direction.SOUTH_EAST:
+      case Direction.NORTH_WEST:
+        return "\\";
+      case Direction.NORTH_EAST:
+      case Direction.SOUTH_WEST:
+        return "/";
+      default:
+        return "+";
+    }
+  }
+
   *grapple(direction: Direction.Direction): Effect {
     let vec = directionToGridVector(direction);
     let inv = Vector.multiplied(vec, [-1, -1]);
-    let target = this.getTarget(direction);
+    const target = this.getTarget(direction);
     let pullTarget = true;
+    let done = () => {};
+
+    if (target) {
+      done = game.level.addFX(terminal => {
+        let pos = Point.translated(target.pos, inv);
+        terminal.putGlyph(pos.x, pos.y, this.glyph)
+
+        while (!Point.equals(pos, this.owner.pos)) {
+          Point.translate(pos, inv);
+          let char = this.getDirectionalChar(direction);
+          terminal.put(pos.x, pos.y, char, Colors.Orange);
+        }
+      });
+    }
 
     // Impossible to pull tiles
     if (target instanceof Tile && !target.type.walkable) pullTarget = false;
@@ -195,9 +228,10 @@ export class Grapple extends Ability {
 
     if (pullTarget) {
       assert(target instanceof Entity, "can only grapple entities");
+      console.log("pull target", pullTarget)
 
       while (true) {
-        target.moveBy(inv[0], inv[1]);
+        target.moveBy(inv[0], inv[1], { forced: true });
 
         if (!target.didMove) {
           target.addStatus(new Stunned(2));
@@ -208,10 +242,12 @@ export class Grapple extends Ability {
       }
     } else {
       while (true) {
-        let moved = game.player.moveBy(vec[0], vec[1]);
-        if (!moved || !this.owner.didMove) break;
+        this.owner.moveBy(vec[0], vec[1], { forced: true });
+        if (!this.owner.didMove) break;
         yield 1;
       }
     }
+
+    done();
   }
 }

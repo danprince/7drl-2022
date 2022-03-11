@@ -1,6 +1,6 @@
 import { Array2D } from "silmarils";
 import { Chars } from "./chars";
-import { DamageType, Entity, Status, Tile } from "./game";
+import { Ability, DamageType, Entity, Stat, Status, Tile } from "./game";
 import { glyphToString } from "./helpers";
 import { Poisoned } from "./statuses";
 import { Panel, singleLineLength, Terminal } from "./terminal";
@@ -30,6 +30,7 @@ export class ViewportPanel extends Panel {
         let { char, fg, bg } = tile.glyph;
 
         if (substance) {
+          char = substance.char || char; 
           fg = substance.fg;
           bg = substance.bg;
         }
@@ -41,7 +42,8 @@ export class ViewportPanel extends Panel {
     let focusedEntity: Entity | undefined;
 
     for (let entity of game.level.entities) {
-      let glyph = entity.intentGlyph || entity.getStatusGlyph();
+      let glyph = entity.getStatusGlyph();
+      let intentGlyph = entity.getIntentGlyph();
 
       terminal.put(
         entity.pos.x,
@@ -50,6 +52,14 @@ export class ViewportPanel extends Panel {
         glyph.fg,
         glyph.bg || Colors.Black
       );
+
+      if (intentGlyph) {
+        terminal.putGlyph(
+          entity.pos.x,
+          entity.pos.y,
+          intentGlyph,
+        );
+      }
 
       if (terminal.isPointerOver(entity.pos.x, entity.pos.y)) {
         focusedEntity = entity;
@@ -75,6 +85,8 @@ export class ViewportPanel extends Panel {
       for (let cell of path) {
         terminal.put(cell.x, cell.y, "+", Colors.Green);
       }
+
+      terminal.print(pointer.x + 1, pointer.y, `${pointer.x}, ${pointer.y}`, Colors.White);
     }
   }
 
@@ -227,32 +239,91 @@ export class SidebarPanel extends Panel {
 }
 
 export class TopBarPanel extends Panel {
-  renderPanel(terminal: Terminal): void {
-    let { hp, ability } = game.player;
+  renderPopup = () => {};
+  _x = 0;
 
-    let color = game.player.hasStatus(Poisoned) ? Colors.Green : Colors.Red;
-    terminal.put(0, 0, Chars.Heart, color);
-    terminal.print(1, 0, hp.current.toString(), Colors.White);
+  drawHitpointsPopup(terminal: Terminal, x: number, y: number) {
+    terminal.popup({
+      x,
+      y,
+      title: "Hitpoints",
+      text: "If these run out, the game is over."
+    });
+  }
+
+  drawStatusPopup(terminal: Terminal, status: Status, x: number, y: number) {
+    terminal.popup({
+      x,
+      y,
+      title: status.name,
+      text: status.description,
+    });
+  }
+
+  renderStatusIcons(terminal: Terminal, statuses: Status[]) {
+    for (let status of statuses) {
+      let turns = String(status.turns);
+      let width = 1 + turns.length;
+      terminal.putGlyph(this._x, 0, status.glyph);
+      terminal.print(this._x + 1, 0, turns, Colors.White);
+
+      if (terminal.isPointerOver(this._x, 0, width, 1)) {
+        let px = this._x;
+        this.renderPopup = () => this.drawStatusPopup(terminal, status, px, 2);
+      }
+
+      this._x += width + 1;
+    }
+  }
+
+  renderHitpoints(terminal: Terminal, hp: Stat) {
+    let _hp = String(hp.current);
+    terminal.put(0, 0, Chars.Heart, Colors.Red);
+    terminal.print(1, 0, _hp, Colors.White);
+
+    if (terminal.isPointerOver(0, 0, 1 + _hp.length, 1)) {
+      this.renderPopup = () => this.drawHitpointsPopup(terminal, 0, 2);
+    }
+
+    this._x = _hp.length + 2;
+  }
+
+  renderAbility(terminal: Terminal, ability: Ability) {
+    let usable = ability.canUse();
+    let fg = usable ? ability.glyph.fg : Colors.Grey2;
+    let bg = usable ? ability.glyph.bg : Colors.Grey1;
+
+    let x1 = terminal.width - 1;
+    let x0 = terminal.width - ability.name.length - 2;
+    terminal.put(x1, 0, ability.glyph.char, fg, bg);
+    terminal.print(x0, 0, ability.name, fg);
+
+    if (terminal.isPointerOver(x1, 0)) {
+      terminal.popup({
+        x: x1,
+        y: 1,
+        align: "start",
+        justify: "end",
+        text: ability.description,
+      });
+    }
+  }
+
+  renderPanel(terminal: Terminal): void {
+    let { hp, ability, statuses } = game.player;
+
+    this.renderPopup = () => {};
+
+    this.renderHitpoints(terminal, hp);
+
+    if (statuses.length) {
+      this.renderStatusIcons(terminal, statuses);
+    }
 
     if (ability) {
-      let usable = ability.canUse();
-      let fg = usable ? ability.glyph.fg : Colors.Grey2;
-      let bg = usable ? ability.glyph.bg : Colors.Grey1;
-
-      let x1 = terminal.width - 1;
-      let x0 = terminal.width - ability.name.length - 2;
-      terminal.put(x1, 0, ability.glyph.char, fg, bg);
-      terminal.print(x0, 0, ability.name, fg);
-
-      if (terminal.isPointerOver(x1, 0)) {
-        terminal.popup({
-          x: x1,
-          y: 1,
-          align: "start",
-          justify: "end",
-          text: ability.description,
-        });
-      }
+      this.renderAbility(terminal, ability);
     }
+
+    this.renderPopup();
   }
 }

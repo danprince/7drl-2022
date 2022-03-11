@@ -64,9 +64,6 @@ export const getRandomEntity: CreateEntity = level =>
   RNG.chance(0.25) ? getUncommonEntity(level) :
   getCommonEntity(level);
 
-export const getObstacleTile: CreateTile = level =>
-  RNG.element(level.type.characteristics.obstacleTiles);
-
 export const defaultLegend: Legend = {
   "*": {},
   ".": {
@@ -88,10 +85,10 @@ export const defaultLegend: Legend = {
   "%": {
     rule: isDefaultWall,
   },
-  "$": {
-    tile: getDefaultFloor,
-    spawn: () => new Entities.Chest(),
-  },
+  //"$": {
+  //  tile: getDefaultFloor,
+  //  spawn: () => new Entities.Chest(),
+  //},
   "?": {
     rule: isWalkable,
     spawn: getRandomEntity,
@@ -111,23 +108,23 @@ export const defaultLegend: Legend = {
   "X": {
     rule: tile => tile.type === Tiles.Doorway,
   },
-  "L": {
-    tile: getDefaultFloor,
-    spawn: () => new Entities.Lever(),
-  },
-  "O": {
-    tile: getDefaultFloor,
-    spawn: () => new Entities.Boulder(),
-  },
+  //"L": {
+  //  tile: getDefaultFloor,
+  //  spawn: () => new Entities.Lever(),
+  //},
+  //"O": {
+  //  tile: getDefaultFloor,
+  //  spawn: () => new Entities.Boulder(),
+  //},
   "~": {
     tile: getDefaultLiquid,
   },
   "≈": {
     rule: isLiquid,
   },
-  "o": {
-    tile: getObstacleTile,
-  },
+  //"o": {
+  //  tile: getObstacleTile,
+  //},
   "=": {
     tile: Tiles.IronBars,
   },

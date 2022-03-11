@@ -1,60 +1,15 @@
-import { RNG } from "silmarils";
 import { LevelType } from "./game";
-import { TileMarker } from "./builders";
 import * as Tiles from "./tiles";
 import * as Entities from "./entities";
 
-export let PrimordialCaverns = new LevelType({
-  name: "Primordial Caverns",
+export let Caverns = new LevelType({
+  name: "Caverns",
   characteristics: {
-    defaultFloorTile: Tiles.Floor,
-    defaultWallTile: Tiles.Wall,
-    defaultLiquidTile: Tiles.Water,
-    commonEntityTypes: [Entities.Stoneshell, Entities.Boulder],
-    uncommonEntityTypes: [Entities.Boar, Entities.Worm],
-    rareEntityTypes: [Entities.FossilKnight],
-    decorativeEntityTypes: [Entities.MushroomBolete],
-    obstacleTiles: [Tiles.Stalagmite],
-  },
-  build(builder) {
-    return builder
-      .noise(RNG.float(0.3, 0.5))
-      .cellularAutomata({
-        iterations: 20,
-        rules: [[5, 6, 7, 8], [3, 4, 5, 6, 7, 8]],
-        outOfBoundsMarker: TileMarker.Wall,
-      })
-      .build({
-        minAccessibleTilesPercent: 0.4,
-        minCriticalPathLength: 30,
-      });
-  },
-});
-
-export let Mantle = new LevelType({
-  name: "Mantle",
-  characteristics: {
-    defaultFloorTile: Tiles.VolcanicFloor,
-    defaultWallTile: Tiles.VolcanicWall,
+    defaultFloorTile: Tiles.Cobblestone,
+    defaultWallTile: Tiles.BoneWall,
     defaultLiquidTile: Tiles.Lava,
-    commonEntityTypes: [Entities.Maguana, Entities.Mantleshell, Entities.Gnome],
-    uncommonEntityTypes: [Entities.Boulder],
-    rareEntityTypes: [Entities.Krokodil],
-    decorativeEntityTypes: [Entities.Thwomp],
-    obstacleTiles: [Tiles.Stalagmite],
-  },
-  build(builder) {
-    return builder
-      .noise(RNG.float(0.3, 0.5))
-      .addPerimeterWall()
-      .cellularAutomata({
-        iterations: 20,
-        rules: [[5, 6, 7, 8], [3, 4, 5, 6, 7, 8]],
-        outOfBoundsMarker: TileMarker.Wall,
-      })
-      .build({
-        minAccessibleTilesPercent: 0,
-        minCriticalPathLength: 20,
-      });
+    commonEntityTypes: [Entities.PunchingBag],
+    uncommonEntityTypes: [Entities.PunchingBag],
+    rareEntityTypes: [Entities.PunchingBag],
   },
 });

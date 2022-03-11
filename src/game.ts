@@ -4,7 +4,6 @@ import { DealDamageEvent, DeathEvent, DespawnEvent, EventHandler, GameEvent, Int
 import { Constructor, dijkstra, directionToGridVector, OneOrMore } from "./helpers";
 import { Glyph, Terminal } from "./terminal";
 import { Colors, UI } from "./ui";
-import type { LevelBuilder } from "./builders";
 
 const ENERGY_REQUIRED_PER_TURN = 12;
 
@@ -26,6 +25,7 @@ export class Game extends EventHandler {
   messages: GameMessage[] = [];
   handlers: EventHandler[] = [];
   turns: number = 0;
+  floor: number = 0;
 
   onEvent(event: GameEvent): void {
     if (this.level) {
@@ -38,11 +38,16 @@ export class Game extends EventHandler {
   }
 
   setLevel(level: Level) {
+    this.floor += 1;
     this.level = level;
     this.level.autotile();
     this.player.pos = Point.clone(level.entrance);
     this.level.addEntity(this.player);
     game.log(this.level.type.name);
+  }
+
+  getNextLevelType(): LevelType {
+    throw new Error("Need to override Game.getNextLevelType");
   }
 
   setPlayer(player: Player) {
@@ -99,30 +104,24 @@ export interface LevelCharacteristics {
   commonEntityTypes: OneOrMore<Constructor<Entity>>;
   uncommonEntityTypes: OneOrMore<Constructor<Entity>>;
   rareEntityTypes: OneOrMore<Constructor<Entity>>;
-  decorativeEntityTypes: OneOrMore<Constructor<Entity>>;
-  obstacleTiles: OneOrMore<TileType>;
 }
 
 export class LevelType extends EventHandler {
   name: string;
   characteristics: LevelCharacteristics;
-  build: (levelBuilder: LevelBuilder) => Level;
 
   constructor({
     name,
-    build,
     characteristics,
     ...events
   }: Partial<EventHandler> & {
     name: string;
     characteristics: LevelCharacteristics,
-    build: (levelBuilder: LevelBuilder) => Level;
   }) {
     super();
     Object.assign(this, events);
     this.name = name;
     this.characteristics = characteristics;
-    this.build = build;
   }
 }
 
@@ -216,7 +215,7 @@ export class Level extends EventHandler {
     );
   }
 
-  isEmpty(x: number, y: number) {
+  isOpen(x: number, y: number) {
     let tile = this.getTile(x, y);
     if (tile == null) return false;
     if (!tile.type.walkable) return false;
@@ -296,7 +295,9 @@ interface TileTypeProps extends Partial<EventHandler> {
   glyph: TileType["glyph"];
   autotiling?: TileType["autotiling"];
   diggable?: TileType["diggable"];
+  flyable?: TileType["flyable"];
   liquid?: TileType["liquid"];
+  flammable?: TileType["flammable"];
   onCreate?: TileType["onCreate"]
   onUpdate?: TileType["onUpdate"]
 }
@@ -305,14 +306,18 @@ export class TileType extends EventHandler {
   glyph: Glyph | VariantGlyph;
   autotiling?: string[];
   walkable: boolean;
+  flyable: boolean;
   diggable: boolean;
+  flammable: boolean;
   liquid: boolean;
 
   constructor({
     glyph,
     autotiling,
     walkable,
+    flyable,
     diggable,
+    flammable,
     liquid,
     ...events
   }: TileTypeProps) {
@@ -321,7 +326,9 @@ export class TileType extends EventHandler {
     this.glyph = glyph;
     this.autotiling = autotiling;
     this.walkable = walkable || false;
+    this.flyable = flyable || false;
     this.diggable = diggable || false;
+    this.flammable = flammable || false;
     this.liquid = liquid || false;
   }
 
@@ -351,6 +358,14 @@ export class Tile {
   constructor(type: TileType) {
     this.type = type;
     this.glyph = type.assignGlyph();
+    this.type.onCreate(this);
+  }
+
+  neighbours(): Tile[] {
+    return Point
+      .mooreNeighbours(this.pos)
+      .map(xy => game.level.getTile(xy.x, xy.y))
+      .filter(tile => tile != null) as Tile[];
   }
 
   onEnter(entity: Entity) {
@@ -358,6 +373,7 @@ export class Tile {
   }
 
   update() {
+    this.type.onUpdate(this);
     this.substance?.update();
   }
 
@@ -393,6 +409,10 @@ export const StatusGlyphs = {
   South: Glyph(Chars.South, Colors.Red),
   West: Glyph(Chars.West, Colors.Red),
   East: Glyph(Chars.East, Colors.Red),
+  NorthEast: Glyph(Chars.NorthEast, Colors.Red),
+  NorthWest: Glyph(Chars.NorthWest, Colors.Red),
+  SouthEast: Glyph(Chars.SouthWest, Colors.Red),
+  SouthWest: Glyph(Chars.SouthWest, Colors.Red),
 };
 
 export class DamageType {
@@ -405,6 +425,24 @@ export class DamageType {
     this.name = name;
     this.description = description;
   }
+
+  static Generic = new DamageType(
+    Glyph(Chars.Sword, Colors.Grey3),
+    "Damage",
+    ""
+  );
+
+  static Healing = new DamageType(
+    Glyph(Chars.Heart, Colors.Red),
+    "Healing",
+    ""
+  );
+
+  static Fire = new DamageType(
+    Glyph(Chars.Fire, Colors.Orange, Colors.Red2),
+    "Fire",
+    ""
+  );
 
   static Trap = new DamageType(
     Glyph("*", Colors.Grey3),
@@ -436,9 +474,9 @@ export class DamageType {
     ""
   );
 
-  static Misc = new DamageType(
-    Glyph(Chars.Sword, Colors.Grey3),
-    "Damage",
+  static Projectile = new DamageType(
+    Glyph(Chars.Missile, Colors.Grey3),
+    "Missile",
     ""
   );
 }
@@ -472,10 +510,15 @@ export abstract class Status extends EventHandler {
   abstract description: string;
   abstract glyph: Glyph;
   entity: Entity = null!;
-  turns: number = Infinity;
+  turns: number;
   onAdded() {}
   onRemoved() {}
   onUpdate() {}
+
+  constructor(turns: number = Infinity) {
+    super();
+    this.turns = turns;
+  }
 
   modifyGlyph(glyph: Glyph): Glyph {
     return glyph;
@@ -517,6 +560,10 @@ export abstract class Entity extends EventHandler {
 
   getTile() {
     return this.level.getTile(this.pos.x, this.pos.y);
+  }
+
+  getIntentGlyph(): Glyph | undefined {
+    return this.intentGlyph;
   }
 
   getStatusGlyph() {
@@ -720,12 +767,15 @@ export abstract class Entity extends EventHandler {
     let tile = this.level.getTile(x, y);
 
     // Can't walk into void tiles
-    if (tile == null) return false;
+    if (tile == null) {
+      this.didMove = false;
+      return false;
+    }
 
     // Don't walk into liquid unless we're being forced
     if (tile.type.liquid && !options.forced) {
       this.didMove = false;
-      return true;
+      return false;
     }
 
     // Can't walk into solid tiles
@@ -910,6 +960,7 @@ export abstract class Substance extends EventHandler {
   abstract fg: number;
   abstract bg: number;
   abstract defaultTimer: number;
+  char: string | undefined;
   tile: Tile = undefined!;
   timer: number = 0;
 
@@ -931,12 +982,16 @@ export abstract class Substance extends EventHandler {
     this.timer -= 1;
     if (this.timer <= 0) {
       this.tile.removeSubstance();
+      this.onRemove();
+    } else {
+      this.onUpdate();
     }
   }
 
   onEnter(entity: Entity) {}
   onExit(entity: Entity) {}
-  onUpdate(entity: Entity) {}
+  onRemove() {}
+  onUpdate() {}
 }
 
 export abstract class Ability extends EventHandler {
@@ -958,7 +1013,7 @@ export enum TargetingMode {
 }
 
 export abstract class Vestige extends EventHandler {
-  owner: Entity = undefined!;
+  owner: Player = undefined!;
   abstract name: string;
   abstract description: string;
   abstract glyph: Glyph;

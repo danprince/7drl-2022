@@ -9,10 +9,10 @@ import { View, Colors } from "./ui";
 export class GameView extends View {
   fps = 40;
 
-  viewport = new ViewportPanel(0, 2, 21, 21);
-  messages = new MessagesPanel(this.viewport, 0, 24, 21, 10);
-  topBar = new TopBarPanel(0, 0, 21, 1);
-  sideBar = new SidebarPanel(-1, 2, 1, 21);
+  viewport = new ViewportPanel(3, 2, 21, 21);
+  messages = new MessagesPanel(this.viewport, 3, 24, 21, 10);
+  topBar = new TopBarPanel(3, 0, 21, 1);
+  sideBar = new SidebarPanel(1, 2, 1, 21);
 
   constructor(private game: Game) {
     super();
@@ -44,13 +44,10 @@ export class GameView extends View {
   }
 
   render(terminal: Terminal) {
-    let x = Math.floor(terminal.width / 2 - this.viewport.bounds.width / 2);
-    let y = 1;
-    let root = terminal.child(x, y, terminal.width, terminal.height);
-    this.viewport.render(root);
-    this.messages.render(root);
-    this.sideBar.render(root);
-    this.topBar.render(root);
+    this.viewport.render(terminal);
+    this.messages.render(terminal);
+    this.sideBar.render(terminal);
+    this.topBar.render(terminal);
   }
 
   onKeyDown(event: KeyboardEvent) {
@@ -230,6 +227,15 @@ export class DirectionTargetingView extends View {
     super();
   }
 
+  isBlocked(x: number, y: number) {
+    let tile = game.level.getTile(x, y);
+    if (tile == null) return true;
+    if (!tile.type.flyable) return true;
+    let entities = game.level.getEntitiesAt(x, y);
+    if (entities.length) return true;
+    return false;
+  }
+
   render(terminal: Terminal): void {
     let cell = Point.translated(
       game.player.pos,
@@ -245,8 +251,7 @@ export class DirectionTargetingView extends View {
       Point.translate(pos, vec);
       let inside = game.level.isInBounds(pos.x, pos.y);
       if (!inside) break;
-      let empty = game.level.isEmpty(pos.x, pos.y);
-      if (empty === false) blocked = true;
+      if (!blocked) blocked = this.isBlocked(pos.x, pos.y);
       let color = blocked ? Colors.Red2 : Colors.White;
       this.viewport.put(terminal, pos.x, pos.y, Chars.Dot, color);
     }

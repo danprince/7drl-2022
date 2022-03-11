@@ -2,14 +2,15 @@ import { Chars } from "./chars";
 import { DealDamageEvent, TakeDamageEvent } from "./events";
 import { DamageType, Status } from "./game";
 import { assert } from "./helpers";
+import { Fire } from "./substances";
 import { Glyph } from "./terminal";
 import { Colors } from "./ui";
 
 export class Molten extends Status {
   name = "Molten";
-  description = "Deal/take {15}2x{/} damage";
+  description = "Deal/take {10}2x{/} damage";
   glyph = Glyph(Chars.Diamond, Colors.Orange3);
-  turns = Infinity;
+  turns = 3;
 
   modifyGlyph(glyph: Glyph): Glyph {
     return { ...glyph, fg: Colors.Orange3 };
@@ -21,6 +22,34 @@ export class Molten extends Status {
 
   onTakeDamage({ damage }: TakeDamageEvent): void {
     damage.amount *= 2;
+  }
+}
+
+export class Burning extends Status {
+  name = "Burning";
+  description = "Take {10}2{/} damage per turn";
+  glyph = Glyph(Chars.Fire, Colors.Orange3);
+  turns = 3;
+
+  modifyGlyph(glyph: Glyph): Glyph {
+    return { ...glyph, fg: Colors.Orange3, bg: Colors.Red2 };
+  }
+
+  update(): void {
+    let tile = this.entity.getTile();
+
+    if (tile && tile.type.flammable && !tile.substance) {
+      tile.setSubstance(new Fire());
+    }
+
+    super.update();
+
+    if (this.entity.hp) {
+      this.entity.applyDamage({
+        type: DamageType.Fire,
+        amount: 2,
+      });
+    }
   }
 }
 

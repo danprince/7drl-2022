@@ -94,6 +94,7 @@ export const Chars = {
   Cobbles: createCharSet(0xc4, 4),
   Walls: createCharSet(0xd0, 4),
   BoneWalls: createCharSet(0xd0, 11),
+  JungleWalls: createCharSet(0xd0, 4).concat(createCharSet(0xdb, 4)),
   Flagstones: createCharSet(0xdb, 5),
   BoxDrawing: createCharSet(0xe0, 16),
   BrickWalls: createCharSet(0xf0, 16),

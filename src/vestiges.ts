@@ -1,4 +1,4 @@
-import { Point, RNG } from "silmarils";
+import { RNG } from "silmarils";
 import { Damage, DamageType, Tile, Vestige } from "./game";
 import { Poisoned, Stunned } from "./statuses";
 import { Glyph } from "./terminal";
@@ -10,6 +10,7 @@ import * as Statuses from "./statuses";
 import * as Effects from "./effects";
 import * as Events from "./events";
 import { Chars } from "./chars";
+import { Blowpipe } from "./abilities";
 
 const MELEE = `{1}${Chars.Fist}{/}`;
 const POISON = `{15}${Chars.Droplet}{/}`;
@@ -29,7 +30,7 @@ export class Bores extends Vestige {
   onTileBump({ tile }: Events.TileBumpEvent): void {
     if (tile.type.diggable) {
       // TODO: Need to make sure takeTurn actually succeeds now
-      let floor = new Tile(Tiles.Floor);
+      let floor = new Tile(Tiles.Cobblestone);
       game.level.setTile(tile.pos.x, tile.pos.y, floor);
     }
   }
@@ -195,6 +196,22 @@ export class MoloksFist extends Vestige {
     assert(this.owner.hp, "hp required");
     if (this.owner.hp.current === 1) {
       damage.amount *= this.multiplier;
+    }
+  }
+}
+
+export class Spitfire extends Vestige {
+  name = "Spitfire";
+  glyph = Glyph(Chars.Missile, Colors.Orange3, Colors.Red2);
+  description = `Blowpipe sets targets on fire`;
+
+  onDealDamage(event: Events.DealDamageEvent): void {
+    // TODO: How to restrict this to only damage coming from the blowpipe
+    // - event.damage.source?
+    // - event.ability?
+    if (game.player.ability instanceof Blowpipe) {
+      event.damage.statuses = event.damage.statuses || [];
+      event.damage.statuses.push(new Statuses.Burning());
     }
   }
 }

@@ -1,15 +1,13 @@
 import { RNG } from "silmarils";
-import { Game, Player } from "./game";
+import { Game, Level, Player } from "./game";
 import { UI } from "./ui";
 import { createFont } from "./terminal";
 import { GameView } from "./views";
 import { loadImage } from "./helpers";
-import { LevelBuilder, registerRoomBuilders } from "./builders";
 import fontUrl from "../font.png";
 import * as Levels from "./levels";
 import * as Handlers from "./handlers";
 import * as Abilities from "./abilities";
-import * as Rooms from "./rooms";
 
 declare global {
   const game: Game;
@@ -26,20 +24,19 @@ async function preload() {
 }
 
 async function start() {
-  registerRoomBuilders(Rooms);
 
   // Setup seed
   let seed = Date.now();
   //seed = 1646855411481;
   console.log("seed:", seed);
   RNG.seed(seed);
-  LevelBuilder.setSeed(seed);
 
   let game = window.game = new Game();
-  let level = LevelBuilder.build(Levels.Mantle);
+
+  let level = new Level(Levels.Caverns, 21, 21);
 
   let player = new Player();
-  player.setAbility(new Abilities.Blowpipe());
+  player.setAbility(new Abilities.Grapple());
 
   game.setPlayer(player);
   game.setLevel(level);

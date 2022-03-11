@@ -4,12 +4,20 @@ import { Colors } from "./ui";
 export class MessageLogHandler extends EventHandler {
   onTakeDamage(event: TakeDamageEvent): void {
     let { entity, dealer, damage } = event;
-    let _amount = `{${Colors.Red}}${damage.amount}{/}`;
+
+    if (damage.amount === 0) {
+      return;
+    }
+
+    let healed = damage.amount < 0;
+    let color = healed ? Colors.Green : Colors.Red;
+    let verb = healed ? "gains" : "loses";
+    let amount = `{${color}}${Math.abs(damage.amount)}{/}`;
 
     if (dealer) {
-      game.log(dealer, "hit", entity, "with", damage.type, "for", _amount);
+      game.log(dealer, "hit", entity, "with", damage.type, "for", amount);
     } else {
-      game.log(entity, "loses", _amount, "to", damage.type);
+      game.log(entity, verb, amount, "from", damage.type);
     }
   }
 
