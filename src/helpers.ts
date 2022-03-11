@@ -86,58 +86,71 @@ export function getDirectionBetween(p1: Point.Point, p2: Point.Point): Direction
   return Direction.fromVector(vec);
 }
 
-export interface DijkstraMap {
-  costSoFar: Array2D.Array2D<number>;
-  cameFrom: Array2D.Array2D<Point.Point | undefined>;
-  pathTo(point: Point.Point): Point.Point[];
-  distanceTo(point: Point.Point): number;
-  finiteDistanceTo(point: Point.Point): number;
-}
-
 type DijkstraCost<T> = (current: T, next: T) => number;
 type DijkstraNeighbours<T> = (current: T) => T[];
 
-export function dijkstra(
-  width: number,
-  height: number,
-  start: Point.Point,
-  getCost: DijkstraCost<Point.Point>,
-  getNeighbours: DijkstraNeighbours<Point.Point> = Point.vonNeumannNeighbours,
-): DijkstraMap {
-  let { get, set, create } = Array2D;
-  let frontier: Point.Point[] = [start];
-  let costSoFar = create<number>(width, height, Infinity);
-  let cameFrom = create<Point.Point | undefined>(width, height);
-  set(costSoFar, start.x, start.y, 0);
+export class DijkstraMap {
+  costSoFar: Array2D.Array2D<number>;
+  cameFrom: Array2D.Array2D<Point.Point | undefined>;
 
-  while (frontier.length) {
-    let current = frontier.pop()!;
-
-    for (let next of getNeighbours(current)) {
-      if (next.x < 0 || next.y < 0 || next.x >= width || next.y >= height) {
-        continue;
-      }
-
-      let currentCost = get(costSoFar, current.x, current.y)!;
-      let extraCost = getCost(current, next);
-      let newCost = currentCost + extraCost;
-      let nextCost = get(costSoFar, next.x, next.y)!;
-
-      if (newCost < nextCost) {
-        set(costSoFar, next.x, next.y, newCost);
-        set(cameFrom, next.x, next.y, current);
-        frontier.push(next);
-      }
-    }
+  constructor(
+    readonly width: number,
+    readonly height: number,
+    readonly start: Point.Point,
+    private getCost: DijkstraCost<Point.Point>,
+    private getNeighbours: DijkstraNeighbours<Point.Point> = Point.vonNeumannNeighbours,
+  ) {
+    this.costSoFar = Array2D.create<number>(width, height, Infinity);
+    this.cameFrom = Array2D.create<Point.Point | undefined>(width, height);
+    this.update();
   }
 
-  function pathTo(end: Point.Point): Point.Point[] {
+  update() {
+    let { get, set, create } = Array2D;
+    let { start, width, height, getCost } = this;
+    let frontier: Point.Point[] = [start];
+    let costSoFar = create<number>(width, height, Infinity);
+    let cameFrom = create<Point.Point | undefined>(width, height);
+    set(costSoFar, start.x, start.y, 0);
+
+    while (frontier.length) {
+      let current = frontier.pop()!;
+
+      for (let next of this.getNeighbours(current)) {
+        if (next.x < 0 || next.y < 0 || next.x >= width || next.y >= height) {
+          continue;
+        }
+
+        let currentCost = get(costSoFar, current.x, current.y)!;
+        let extraCost = getCost(current, next);
+        let newCost = currentCost + extraCost;
+        let nextCost = get(costSoFar, next.x, next.y)!;
+
+        if (newCost < nextCost) {
+          set(costSoFar, next.x, next.y, newCost);
+          set(cameFrom, next.x, next.y, current);
+          frontier.push(next);
+        }
+      }
+    }
+
+    this.costSoFar = costSoFar;
+    this.cameFrom = cameFrom;
+  }
+
+  debug() {
+    console.log(
+      Array2D.toString(Array2D.map(this.costSoFar, (cost) => isFinite(cost) ? String(cost % 10) : "∞"))
+    );
+  }
+
+  shortestPath(end: Point.Point) {
     let path: Point.Point[] = [];
     let prev: Point.Point | undefined = end;
 
     while (prev) {
       path.unshift(Point.clone(prev));
-      prev = Array2D.get(cameFrom, prev.x, prev.y);
+      prev = Array2D.get(this.cameFrom, prev.x, prev.y);
     }
 
     if (path.length === 1) {
@@ -147,39 +160,29 @@ export function dijkstra(
     }
   }
 
-  function distanceTo(point: Point.Point): number {
-    return Array2D.get(costSoFar, point.x, point.y)!;
+  distanceTo(point: Point.Point) {
+    return Array2D.get(this.costSoFar, point.x, point.y)!;
   }
 
-  function finiteDistanceTo(point: Point.Point): number {
-    let distance = distanceTo(point);
+  finiteDistanceTo(point: Point.Point) {
+    let distance = this.distanceTo(point);
     return isFinite(distance) ? distance : 0;
   }
 
-  return {
-    costSoFar,
-    cameFrom,
-    pathTo,
-    distanceTo,
-    finiteDistanceTo,
-  };
+  longestPathLength() {
+    let distances = this.costSoFar.data.filter(isFinite)
+    return Math.max(...distances);
+  }
 }
 
-export class PointSet {
-  private set = new Set<`${number}:${number}`>();
-
-  add({ x, y }: Point.Point): this {
-    this.set.add(`${x}:${y}`);
-    return this;
-  }
-
-  has({ x, y }: Point.Point): boolean {
-    return this.set.has(`${x}:${y}`);
-  }
-
-  delete({ x, y }: Point.Point): boolean {
-    return this.set.delete(`${x}:${y}`);
-  }
+export function dijkstra(
+  width: number,
+  height: number,
+  start: Point.Point,
+  getCost: DijkstraCost<Point.Point>,
+  getNeighbours?: DijkstraNeighbours<Point.Point>,
+): DijkstraMap {
+  return new DijkstraMap(width, height, start, getCost, getNeighbours);
 }
 
 export function maxBy<T>(items: T[], getScore: (item: T) => number): T {
@@ -212,32 +215,4 @@ export function minBy<T>(items: T[], getScore: (item: T) => number): T {
   }
 
   return best;
-}
-
-// TODO: Stamp should probably be array2d then they can be rotated
-export function createStamp(pattern: string): Point.Point[] {
-  let cells = Array2D.fromString(pattern);
-  let origin: Point.Point = Point.ORIGIN;
-
-  for (let x = 0; x < cells.width; x++) {
-    for (let y = 0; y < cells.height; y++) {
-      if (Array2D.get(cells, x, y) === "@") {
-        origin = { x, y };
-        break;
-      }
-    }
-  }
-
-  let center = Point.floored({ x: cells.width / 2, y: cells.height / 2 });
-  let stamp: Point.Point[] = [];
-
-  for (let x = 0; x < cells.width; x++) {
-    for (let y = 0; y < cells.height; y++) {
-      if (Array2D.get(cells, x, y) !== ".") {
-        stamp.push({ x: x - center.x, y: y - center.y });
-      }
-    }
-  }
-
-  return stamp;
 }

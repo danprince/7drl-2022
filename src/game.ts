@@ -4,6 +4,7 @@ import { DealDamageEvent, DeathEvent, DespawnEvent, EventHandler, GameEvent, Int
 import { Constructor, dijkstra, directionToGridVector, OneOrMore } from "./helpers";
 import { Glyph, Terminal } from "./terminal";
 import { Colors, UI } from "./ui";
+import { Digger } from "./digger";
 
 const ENERGY_REQUIRED_PER_TURN = 12;
 
@@ -44,10 +45,6 @@ export class Game extends EventHandler {
     this.player.pos = Point.clone(level.entrance);
     this.level.addEntity(this.player);
     game.log(this.level.type.name);
-  }
-
-  getNextLevelType(): LevelType {
-    throw new Error("Need to override Game.getNextLevelType");
   }
 
   setPlayer(player: Player) {
@@ -101,6 +98,7 @@ export interface LevelCharacteristics {
   defaultFloorTile: TileType;
   defaultWallTile: TileType;
   defaultLiquidTile: TileType;
+  defaultDoorTile: TileType;
   commonEntityTypes: OneOrMore<Constructor<Entity>>;
   uncommonEntityTypes: OneOrMore<Constructor<Entity>>;
   rareEntityTypes: OneOrMore<Constructor<Entity>>;
@@ -109,19 +107,23 @@ export interface LevelCharacteristics {
 export class LevelType extends EventHandler {
   name: string;
   characteristics: LevelCharacteristics;
+  dig: (digger: Digger, entrance: Point.Point) => void;
 
   constructor({
     name,
     characteristics,
+    dig,
     ...events
   }: Partial<EventHandler> & {
     name: string;
     characteristics: LevelCharacteristics,
+    dig: LevelType["dig"],
   }) {
     super();
     Object.assign(this, events);
     this.name = name;
     this.characteristics = characteristics;
+    this.dig = dig;
   }
 }
 
@@ -266,7 +268,7 @@ export class Level extends EventHandler {
   }
 
   findShortestPath(start: Point.Point, end: Point.Point) {
-    return this.getDijkstraMap(start).pathTo(end);
+    return this.getDijkstraMap(start).shortestPath(end);
   }
 
   points(): Point.Point[] {

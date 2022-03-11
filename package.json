@@ -12,6 +12,6 @@
     "vite": "^2.8.0"
   },
   "dependencies": {
-    "silmarils": "^0.7"
+    "silmarils": "^0.8"
   }
 }

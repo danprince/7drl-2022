@@ -413,3 +413,18 @@ export function textToLines(text: string, maxLineLength: number) {
   lines.push({ parts, length });
   return lines;
 }
+
+/**
+ * When visualizing a grid of values its not possible to draw multiple
+ * digits for each cell. This function renders the ones column as a single
+ * digit and uses a color code to represent the tens column.
+ */
+export function putDebugDigit(terminal: Terminal, x: number, y: number, value: number) {
+  let scale = [Colors.Blue, Colors.Turquoise, Colors.Green, Colors.Orange, Colors.Red, Colors.Pink];
+  if (isFinite(value)) {
+    let digit = String(value % 10);
+    let tens = Math.floor(value / 10);
+    let fg = scale[tens] || Colors.White;
+    terminal.put(x, y, digit, fg);
+  }
+}

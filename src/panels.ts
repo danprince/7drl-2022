@@ -2,11 +2,18 @@ import { Array2D } from "silmarils";
 import { Chars } from "./chars";
 import { Ability, DamageType, Entity, Stat, Status, Tile } from "./game";
 import { glyphToString } from "./helpers";
-import { Poisoned } from "./statuses";
-import { Panel, singleLineLength, Terminal } from "./terminal";
-import { Colors } from "./ui";
+import { Panel, putDebugDigit, singleLineLength, Terminal } from "./terminal";
+import { Colors, View } from "./ui";
+
+type DebuggingRenderer = (terminal: Terminal) => any;
 
 export class ViewportPanel extends Panel {
+  static debuggingRenderers: DebuggingRenderer[] = [];
+
+  static addDebuggingRenderer(renderer: DebuggingRenderer) {
+    this.debuggingRenderers.push(renderer);
+  }
+
   dijkstraMapsEnabled = false;
 
   put(terminal: Terminal, x: number, y: number, ch: string, fg: number, bg?: number) {
@@ -79,31 +86,33 @@ export class ViewportPanel extends Panel {
     }
 
     if (terminal.isKeyDown("Alt")) {
-      let pointer = terminal.getRelativePointerPosition();
-      let path = game.level.findShortestPath(game.player.pos, pointer);
-
-      for (let cell of path) {
-        terminal.put(cell.x, cell.y, "+", Colors.Green);
-      }
-
-      terminal.print(pointer.x + 1, pointer.y, `${pointer.x}, ${pointer.y}`, Colors.White);
+      this.drawShortestPath(terminal);
     }
+
+    for (let renderer of ViewportPanel.debuggingRenderers) {
+      renderer(terminal);
+    }
+  }
+
+  drawShortestPath(terminal: Terminal) {
+    let pointer = terminal.getRelativePointerPosition();
+    let path = game.level.findShortestPath(game.player.pos, pointer);
+
+    for (let cell of path) {
+      terminal.put(cell.x, cell.y, "+", Colors.Green);
+    }
+
+    terminal.print(pointer.x + 1, pointer.y, `${pointer.x}, ${pointer.y}`, Colors.White);
   }
 
   drawDijkstraMaps(terminal: Terminal) {
     let map = game.level.getDijkstraMap(game.player.pos);
-    let scale = [Colors.Blue, Colors.Green, Colors.Orange, Colors.Red];
+    console.log(Array2D.toString(Array2D.map(map.costSoFar, (cost) => isFinite(cost) ? String(cost % 10) : "∞")));
 
     for (let y = 0; y < game.level.height; y++) {
       for (let x = 0; x < game.level.width; x++) {
         let cost = Array2D.get(map.costSoFar, x, y)!;
-
-        if (isFinite(cost)) {
-          let digit = String(cost % 10);
-          let tens = Math.floor(cost / 10);
-          let fg = scale[tens] || Colors.Pink;
-          terminal.put(x, y, digit, fg);
-        }
+        putDebugDigit(terminal, x, y, cost);
       }
     }
   }
