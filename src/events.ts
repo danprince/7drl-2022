@@ -1,8 +1,13 @@
 import { Damage, Entity, Level, Status, Tile, Vestige } from "./game";
+import { Constructor } from "./helpers";
 
 export abstract class GameEvent {
   protected abstract invoke(handler: EventHandler): void;
   abstract dispatch(...args: any[]): void;
+
+  is<T extends GameEvent>(constructor: Constructor<T>): this is T {
+    return this instanceof constructor;
+  }
 
   sendTo(handler: EventHandler) {
     handler.onEvent(this);
@@ -57,7 +62,7 @@ export class ExitLevelEvent extends GameEvent {
 
   dispatch() {
     this.sendTo(game.player);
-   this.sendTo(game);
+    this.sendTo(game);
   }
 }
 

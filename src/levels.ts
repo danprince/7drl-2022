@@ -1,9 +1,8 @@
-import { Direction, Point, PRNG, RNG } from "silmarils";
 import { LevelType } from "./game";
-import { CellularAutomataRules, Digger, Marker, Spades, Symmetry } from "./digger";
 import * as Tiles from "./tiles";
 import * as Entities from "./entities";
 import * as Terrains from "./terrains";
+import { Marker } from "./digger";
 
 export let Caverns = new LevelType({
   name: "Caverns",
@@ -50,5 +49,21 @@ export let Mantle = new LevelType({
     rareMonsterTypes: [Entities.RareSlime],
     baseMonsterSpawnChance: 0.02,
     maxRewards: 4,
+  },
+});
+
+export let Grasslands = new LevelType({
+  name: "Grasslands",
+  dig: digger => digger.fill(Marker.Floor),
+  characteristics: {
+    defaultFloorTile: Tiles.Grass,
+    defaultWallTile: Tiles.VolcanicWall,
+    defaultLiquidTile: Tiles.Water,
+    defaultDoorTile: Tiles.Doorway,
+    commonMonsterTypes: [Entities.Slime],
+    uncommonMonsterTypes: [Entities.UncommonSlime],
+    rareMonsterTypes: [Entities.RareSlime],
+    baseMonsterSpawnChance: 0.0,
+    maxRewards: 0,
   },
 });

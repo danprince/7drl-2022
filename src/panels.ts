@@ -1,10 +1,9 @@
 import { Array2D } from "silmarils";
-import { Chars } from "./chars";
+import { Glyph, Chars, Colors } from "./common";
 import { debuggingRenderer as designerDebuggingRenderer } from "./designer";
-import { Ability, DamageType, Entity, Stat, Status, Tile } from "./game";
+import { Ability, DamageType, Entity, Status, Tile } from "./game";
 import { glyphToString } from "./helpers";
-import { Glyph, Panel, debugBigDigit, singleLineLength, Terminal } from "./terminal";
-import { Colors } from "./ui";
+import { Panel, debugBigDigit, singleLineLength, Terminal } from "./terminal";
 
 export class ViewportPanel extends Panel {
   dijkstraMapsEnabled = false;
@@ -126,7 +125,7 @@ export class ViewportPanel extends Panel {
       text += glyphToString(status.glyph);
     }
 
-    terminal.popup({
+    terminal.drawPopup({
       x: Math.floor(terminal.width / 2),
       y: terminal.height,
       text,
@@ -180,7 +179,7 @@ export class MessagesPanel extends Panel {
           terminal.putGlyph(tx, ty, part.glyph);
 
           if (terminal.isPointerOver(tx, ty)) {
-            defer = () => terminal.popup({
+            defer = () => terminal.drawPopup({
               x: px,
               y: py + 1,
               title: `${glyphToString(part.glyph)} ${part.name}`,
@@ -192,7 +191,7 @@ export class MessagesPanel extends Panel {
         } else if (part instanceof DamageType) {
           terminal.putGlyph(tx, ty, part.glyph);
           if (terminal.isPointerOver(tx, ty)) {
-            defer = () => terminal.popup({
+            defer = () => terminal.drawPopup({
               x: px + 2,
               y: py,
               title: part.name,
@@ -202,7 +201,7 @@ export class MessagesPanel extends Panel {
           tx += 1;
         } else if (typeof part === "string" || typeof part === "number") {
           let text = part.toString();
-          terminal.write(tx, ty, text, color);
+          terminal.write(tx, ty, text, { fg: color });
           tx += singleLineLength(text);
         } else {
           terminal.putGlyph(tx, ty, part);
@@ -230,7 +229,7 @@ export class SidebarPanel extends Panel {
       terminal.putGlyph(0, i, vestige.glyph);
 
       if (terminal.isPointerOver(0, i)) {
-        terminal.popup({
+        terminal.drawPopup({
           x: 2,
           y: i,
           title: vestige.name,
@@ -257,7 +256,7 @@ export class TopBarPanel extends Panel {
       terminal,
       Glyph(Chars.Heart, Colors.Red),
       String(hp.current),
-      (x, y) => terminal.popup({
+      (x, y) => terminal.drawPopup({
         x,
         y,
         title: "Hitpoints",
@@ -269,7 +268,7 @@ export class TopBarPanel extends Panel {
       terminal,
       Glyph(Chars.Obsidian, Colors.Grey2),
       String(currency),
-      (x, y) => terminal.popup({
+      (x, y) => terminal.drawPopup({
         x,
         y,
         title: "Obsidian",
@@ -282,13 +281,17 @@ export class TopBarPanel extends Panel {
         terminal,
         status.glyph,
         isFinite(status.turns) ? String(status.turns) : "",
-        (x, y) => terminal.popup({
+        (x, y) => terminal.drawPopup({
           x,
           y,
           title: status.name,
           text: status.description,
         }),
       );
+    }
+
+    if (game.player.hasKey) {
+      this.renderKey(terminal);
     }
 
     if (ability) {
@@ -314,6 +317,11 @@ export class TopBarPanel extends Panel {
     }
   }
 
+  renderKey(terminal: Terminal) {
+    let x = terminal.width - 3;
+    terminal.put(x, 0, Chars.Key, Colors.Orange);
+  }
+
   renderAbility(terminal: Terminal, ability: Ability) {
     let usable = ability.canUse();
     let fg = usable ? ability.glyph.fg : Colors.Grey2;
@@ -323,7 +331,7 @@ export class TopBarPanel extends Panel {
     terminal.put(x1, 0, ability.glyph.char, fg, bg);
 
     if (terminal.isPointerOver(x1, 0)) {
-      terminal.popup({
+      terminal.drawPopup({
         x: x1,
         y: 2,
         align: "start",

@@ -1,10 +1,9 @@
 import { Direction, Point, Vector } from "silmarils";
-import { Chars } from "./chars";
+import { Chars, Glyph } from "./common";
 import { Ability, Damage, DamageType, Effect, Entity, TargetingMode, Tile } from "./game";
 import { assert, directionToGridVector } from "./helpers";
 import { Molten, Stunned } from "./statuses";
-import { Glyph } from "./terminal";
-import { Colors } from "./ui";
+import { Colors } from "./common";
 
 export class Blowpipe extends Ability {
   name = "Blowpipe";

@@ -1,73 +1,33 @@
 import { Point } from "silmarils";
 import { Font, Inputs, Renderer, Terminal } from "./terminal";
 import { Game } from "./game";
+import { EventHandler, GameEvent } from "./events";
 
-export const Colors = {
-  // Base palette
-  Black: 0,
-  White: 1,
-  Grey: 7,
-  Orange: 11,
-  Green: 15,
-  Turquoise: 19,
-  Blue: 23,
-  Pink: 27,
-  Red: 31,
 
-  // Sets
-  Greys: [4, 5, 6, 7],
-  Oranges: [8, 9, 10, 11],
-  Greens: [12, 13, 14, 15],
-  Turquoises: [16, 17, 18, 19],
-  Blues: [20, 21, 22, 23],
-  Pinks: [24, 25, 26, 27],
-  Reds: [28, 29, 30, 31],
+type PopupOptions = Parameters<Terminal["drawPopup"]>[0];
 
-  // Shades
-  Grey1: 4,
-  Grey2: 5,
-  Grey3: 6,
-  Grey4: 7,
-  Orange1: 8,
-  Orange2: 9,
-  Orange3: 10,
-  Orange4: 11,
-  Green1: 12,
-  Green2: 13,
-  Green3: 14,
-  Green4: 15,
-  Turquoise1: 16,
-  Turquoise2: 17,
-  Turquoise3: 18,
-  Turquoise4: 19,
-  Blue1: 20,
-  Blue2: 21,
-  Blue3: 22,
-  Blue4: 23,
-  Pink1: 24,
-  Pink2: 25,
-  Pink3: 26,
-  Pink4: 27,
-  Red1: 28,
-  Red2: 29,
-  Red3: 30,
-  Red4: 31,
-};
+interface QueuedPopup {
+  terminal: Terminal;
+  options: PopupOptions;
+}
 
-export class UI {
+export class UI extends EventHandler {
   views: View[] = [];
   terminal: Terminal;
   inputs: Inputs;
   renderer: Renderer;
   game: Game;
   lastEvent: Event | undefined;
+  popups: QueuedPopup[] = [];
 
   constructor(game: Game, font: Font, palette: string[]) {
+    super();
     this.game = game;
+    this.game.globalEventHandlers.push(this);
     this.inputs = new Inputs();
     this.renderer = new Renderer(font, palette);
     this.terminal = new Terminal(this.renderer, this.inputs);
-    this.resize(42, 32);
+    this.resize(27, 32);
     document.body.append(this.renderer.canvas);
     window.addEventListener("keydown", this.dispatch);
     window.addEventListener("pointermove", this.dispatch);
@@ -75,10 +35,20 @@ export class UI {
     window.addEventListener("pointerdown", this.dispatch);
   }
 
+  popup(terminal: Terminal, options: PopupOptions) {
+    this.popups.push({ terminal, options });
+  }
+
   resize(width: number, height: number) {
     this.renderer.resize(width, height);
     this.terminal.bounds.width = width;
     this.terminal.bounds.height = height;
+  }
+
+  onEvent(event: GameEvent): void {
+    for (let view of this.views) {
+      view.onGameEvent(event);
+    }
   }
 
   private onKeyDown(event: KeyboardEvent): boolean {
@@ -92,7 +62,7 @@ export class UI {
     return false;
   }
 
-  private onEvent(event: Event): boolean {
+  private onDomEvent(event: Event): boolean {
     for (let i = this.views.length - 1; i >= 0; i--) {
       let view = this.views[i];
       if (view.onEvent(event) === true) {
@@ -123,7 +93,7 @@ export class UI {
     this.lastEvent = event;
     this.inputs.dispatch(event);
 
-    this.onEvent(event);
+    this.onDomEvent(event);
 
     if (event.type === "keydown") {
       this.onKeyDown(event as KeyboardEvent);
@@ -141,6 +111,13 @@ export class UI {
 
     for (let view of this.views) {
       view.render(this.terminal);
+
+      // Render popups last, so they are always above their view
+      for (let popup of this.popups) {
+        popup.terminal.drawPopup(popup.options);
+      }
+
+      this.popups = [];
     }
   }
 
@@ -162,4 +139,5 @@ export class View {
   render(terminal: Terminal) {}
   onKeyDown(event: KeyboardEvent): void | boolean {}
   onEvent(event: Event): void | boolean {}
+  onGameEvent(event: GameEvent): void | boolean {}
 }

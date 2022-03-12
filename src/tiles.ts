@@ -1,7 +1,5 @@
 import { TileType } from "./game";
-import { Colors } from "./ui";
-import { Chars } from "./chars";
-import { Glyph } from "./terminal";
+import { Glyph, Colors, Chars } from "./common";
 import * as Substances from "./substances";
 
 export let ScorchedEarth = new TileType({
@@ -120,7 +118,7 @@ export let VolcanicFloor = new TileType({
   flyable: true,
   glyph: {
     char: Chars.Diagonals,
-    fg: [Colors.Red2],
+    fg: [Colors.Red1, Colors.Orange1],
   },
 });
 
@@ -128,7 +126,7 @@ export let VolcanicWall = new TileType({
   diggable: true,
   glyph: {
     char: Chars.Walls,
-    fg: [Colors.Red4],
+    fg: [Colors.Red3, Colors.Orange3],
   },
 });
 

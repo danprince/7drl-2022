@@ -1,6 +1,5 @@
 import { Array2D, Direction, Point, Vector } from "silmarils";
-import { Chars } from "./chars";
-import { Glyph } from "./terminal";
+import { Glyph, Chars } from "./common";
 
 export type Constructor<T> = { new(...args: any[]): T };
 export type OneOrMore<T> = [item: T, ...items: T[]];

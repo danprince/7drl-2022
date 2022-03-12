@@ -1,13 +1,13 @@
 import { RNG } from "silmarils";
-import { Game, Player } from "./game";
+import { Game, Player, Vestige } from "./game";
 import { UI } from "./ui";
 import { createFont } from "./terminal";
 import { GameView } from "./views";
 import { loadImage } from "./helpers";
 import fontUrl from "../font.png";
 import * as Levels from "./levels";
-import * as Handlers from "./handlers";
 import * as Abilities from "./abilities";
+import * as Vestiges from "./vestiges";
 import { designLevel, LevelDesigner } from "./designer";
 
 declare global {
@@ -32,16 +32,19 @@ async function start() {
   LevelDesigner.setSeed(RNG.int());
 
   let game = window.game = new Game();
-  let level = designLevel(Levels.Mantle, { x: 10, y: 2 });
+
+  for (let vestigeType of Object.values(Vestiges)) {
+    let vestige = new vestigeType() as Vestige;
+    game.addVestigeToPool(vestige);
+  }
+
+  // Design the first level
+  let level = designLevel(Levels.Caverns, { x: 10, y: 2 });
 
   let player = new Player();
   player.setAbility(new Abilities.Grapple());
-
   game.setPlayer(player);
   game.setLevel(level);
-
-  // Setup global handlers
-  game.handlers.push(new Handlers.MessageLogHandler);
 
   // Setup the UI
   let assets = await preload();

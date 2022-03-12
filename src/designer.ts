@@ -1,10 +1,9 @@
 import { Array2D, Direction, Point, PRNG } from "silmarils";
 import { Digger, Marker } from "./digger";
-import { Level, LevelType, Entity, Tile, Substance, Stat, Status } from "./game";
-import { assert, DijkstraMap, directionToGridVector, maxBy, minBy } from "./helpers";
+import { Level, LevelType, Entity, Tile } from "./game";
+import { assert, DijkstraMap, directionToGridVector, maxBy } from "./helpers";
 import * as Tiles from "./tiles";
 import * as Entities from "./entities";
-import * as Statuses from "./statuses";
 
 import { debugBigDigit, debugDot, debugDigit, debugPercent, Terminal } from "./terminal";
 
@@ -219,7 +218,7 @@ export class LevelDesigner {
     let rewardPoint = pointsByRewardPotential.pop()!;
     let keyChest = new Entities.Chest();
     keyChest.pos = rewardPoint;
-    keyChest.loot = () => game.player.addStatus(new Statuses.FoundKey);
+    keyChest.loot = () => game.player.hasKey = true;
     rewards.push(keyChest);
 
     let maxRewards = this.levelType.characteristics.maxRewards;
@@ -254,8 +253,8 @@ export class LevelDesigner {
     let currency = 0;
 
     if (rare) currency = PRNG.int(this.rng, 10, 20);
-    else if (uncommon) currency = PRNG.int(this.rng, 2, 5);
-    else currency = 1;
+    else if (uncommon) currency = PRNG.int(this.rng, 5, 10);
+    else currency = PRNG.int(this.rng, 1, 5);
 
     chest.loot = (entity: Entity) => {
       if (entity === game.player) {
@@ -367,8 +366,8 @@ export class LevelDesigner {
     this.debug();
 
     let level = new Level(this.levelType, this.width, this.height);
-    level.entrance = this.entrance;
-    level.exit = this.exit;
+    level.entrancePoint = this.entrance;
+    level.exitPoint = this.exit;
 
     // Copy tiles and entities across
     for (let point of this.points()) {
@@ -395,14 +394,12 @@ export class LevelDesigner {
 
     exitTile.onEnter = entity => {
       if (entity === game.player) {
-        let nextLevel = designLevel(this.levelType, this.exit);
-        game.player.removeStatusType(Statuses.FoundKey);
-        game.setLevel(nextLevel);
+        level.exit();
       }
     };
 
-    level.setTile(level.entrance.x, level.entrance.y, entranceTile);
-    level.setTile(level.exit.x, level.exit.y, exitTile);
+    level.setTile(level.entrancePoint.x, level.entrancePoint.y, entranceTile);
+    level.setTile(level.exitPoint.x, level.exitPoint.y, exitTile);
 
     return level;
   }

@@ -1,3 +1,65 @@
+export interface Glyph {
+  char: string;
+  fg: number;
+  bg?: number;
+}
+
+export function Glyph(char: string, fg: number, bg?: number): Glyph {
+  return { char, fg, bg };
+}
+
+export const Colors = {
+  // Base palette
+  Black: 0,
+  White: 1,
+  Grey: 7,
+  Orange: 11,
+  Green: 15,
+  Turquoise: 19,
+  Blue: 23,
+  Pink: 27,
+  Red: 31,
+
+  // Sets
+  Greys: [4, 5, 6, 7],
+  Oranges: [8, 9, 10, 11],
+  Greens: [12, 13, 14, 15],
+  Turquoises: [16, 17, 18, 19],
+  Blues: [20, 21, 22, 23],
+  Pinks: [24, 25, 26, 27],
+  Reds: [28, 29, 30, 31],
+
+  // Shades
+  Grey1: 4,
+  Grey2: 5,
+  Grey3: 6,
+  Grey4: 7,
+  Orange1: 8,
+  Orange2: 9,
+  Orange3: 10,
+  Orange4: 11,
+  Green1: 12,
+  Green2: 13,
+  Green3: 14,
+  Green4: 15,
+  Turquoise1: 16,
+  Turquoise2: 17,
+  Turquoise3: 18,
+  Turquoise4: 19,
+  Blue1: 20,
+  Blue2: 21,
+  Blue3: 22,
+  Blue4: 23,
+  Pink1: 24,
+  Pink2: 25,
+  Pink3: 26,
+  Pink4: 27,
+  Red1: 28,
+  Red2: 29,
+  Red3: 30,
+  Red4: 31,
+};
+
 export const Chars = {
   Null: "\x00",
 
@@ -29,7 +91,7 @@ export const Chars = {
   Fist: "\x15",
   Loop: "\x16",
   Skull: "\x17",
-  Boots: "\x18",
+  Potion: "\x18",
   Fire: "\x19",
   Eye: "\x1a",
   Missile: "\x1b",
@@ -113,3 +175,13 @@ function createCharSet(startCharCode: number, size = 16) {
   }
   return chars;
 }
+
+export const Glyphs = {
+  Poison: Glyph(Chars.Droplet, Colors.Green),
+  Melee: Glyph(Chars.Fist, Colors.White),
+  Stun: Glyph(Chars.Stun, Colors.Blue),
+  Knockback: Glyph(Chars.East, Colors.Blue),
+  HP: Glyph(Chars.Heart, Colors.Red),
+  Obsidian: Glyph(Chars.Obsidian, Colors.Grey2),
+  Turns: Glyph(Chars.Time, Colors.Blue),
+};

@@ -1,9 +1,9 @@
 import { RNG } from "silmarils";
 import { Entity, Substance, Tile } from "./game";
-import { Colors } from "./ui";
+import { Colors } from "./common";
 import * as Statuses from "./statuses";
 import * as Tiles from "./tiles";
-import { Chars } from "./chars";
+import { Chars } from "./common";
 
 export class Slime extends Substance {
   defaultTimer = 5;

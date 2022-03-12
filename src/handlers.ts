@@ -1,7 +1,6 @@
-import { Chars } from "./chars";
-import { DeathEvent, EventHandler, GainCurrencyEvent, StatusAddedEvent, TakeDamageEvent } from "./events";
-import { Glyph } from "./terminal";
-import { Colors } from "./ui";
+import { Glyph, Chars } from "./common";
+import { DeathEvent, EnterLevelEvent, EventHandler, GainCurrencyEvent, StatusAddedEvent, TakeDamageEvent } from "./events";
+import { Colors } from "./common";
 
 export class MessageLogHandler extends EventHandler {
   onTakeDamage(event: TakeDamageEvent): void {
@@ -45,5 +44,9 @@ export class MessageLogHandler extends EventHandler {
 
   onGainCurrency(event: GainCurrencyEvent): void {
     game.log("You find", Glyph(Chars.Obsidian, Colors.Grey2), event.amount);
+  }
+
+  onEnterLevel(event: EnterLevelEvent): void {
+    game.log(Chars.Upstairs, event.level.type.name, "-", game.floor);
   }
 }

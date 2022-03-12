@@ -1,6 +1,18 @@
 import { Keyboard, Point, Rectangle } from "silmarils";
-import { Chars } from "./chars";
-import { Colors } from "./ui";
+import { Chars, Colors, Glyph } from "./common";
+
+export enum TextAlign {
+  Left,
+  Right,
+  Center,
+}
+
+export interface TextAttrs {
+  fg?: number;
+  bg?: number;
+  textAlign?: TextAlign;
+  maxLineLength?: number;
+}
 
 export class Terminal {
   renderer: Renderer;
@@ -54,10 +66,24 @@ export class Terminal {
     );
   }
 
-  child(x: number, y: number, width: number, height: number): Terminal {
+  child(
+    x: number,
+    y: number,
+    width: number = this.bounds.width,
+    height: number = this.bounds.height,
+  ): Terminal {
     let term = new Terminal(this.renderer, this.inputs);
     term.bounds = { x: this.bounds.x + x, y: this.bounds.y + y, width, height };
     return term;
+  }
+
+  childWithPadding(padX: number, padY = padX) {
+    return this.child(
+      padX,
+      padY,
+      this.bounds.width - padX * 2,
+      this.bounds.height - padY * 2,
+    );
   }
 
   put(x: number, y: number, char: string, fg: number, bg?: number) {
@@ -74,15 +100,36 @@ export class Terminal {
     }
   }
 
+  button(x: number, y: number, text: string) {
+    let hover = this.isPointerOver(x, y, x + text.length, 1);
+    let active = hover && this.isPointerDown();
+    let fg = hover ? Colors.White : Colors.Grey3;
+    let bg = active ? Colors.Grey1 : Colors.Black;
+    this.print(x, y, text, fg, bg);
+    return active;
+  }
+
   write(
     x: number,
     y: number,
     text: string,
-    defaultColor: number = Colors.White,
-    maxLineLength = this.bounds.width - x
+    attrs: TextAttrs = {},
   ) {
-    let fg = defaultColor;
-    let bg = 0;
+    let defaultFg = attrs.fg ?? Colors.White;
+    let defaultBg = attrs.bg ?? Colors.Black;
+    let textAlign = attrs.textAlign ?? TextAlign.Left;
+    let maxLineLength = attrs.maxLineLength ?? this.bounds.width - x;
+
+    switch (textAlign) {
+      case TextAlign.Center:
+      case TextAlign.Right:
+        // TODO: Not quite right, but good enough for now
+        maxLineLength = this.bounds.width;
+        break;
+    }
+
+    let fg = defaultFg;
+    let bg = defaultBg;
 
     let tx = x;
     let ty = y;
@@ -90,15 +137,21 @@ export class Terminal {
     let lines = textToLines(text, maxLineLength);
 
     for (let line of lines) {
+      if (textAlign === TextAlign.Center) {
+        tx = x - Math.ceil(line.length / 2);
+      } else if (textAlign === TextAlign.Right) {
+        tx = x - line.length;
+      }
+
       for (let part of line.parts) {
         if (part[0] === "{") {
           if (part[1] == "/") {
-            fg = defaultColor;
-            bg = 0;
+            fg = defaultFg;
+            bg = defaultBg;
           } else {
             let colors = part.slice(1, -1).split(":");
-            fg = parseInt(colors[0]) || defaultColor;
-            bg = parseInt(colors[1]) || 0;
+            fg = parseInt(colors[0]) || defaultFg;
+            bg = parseInt(colors[1]) || defaultBg;
           }
         } else {
           for (let i = 0; i < part.length; i++) {
@@ -114,7 +167,7 @@ export class Terminal {
     }
   }
 
-  popup({
+  drawPopup({
     x,
     y,
     title = "",
@@ -123,6 +176,8 @@ export class Terminal {
     textColor = Colors.Grey3,
     justify = "start",
     align = "start",
+    frameColor = Colors.Grey2,
+    maxWidth = 20,
   }: {
     x: number,
     y: number,
@@ -130,11 +185,11 @@ export class Terminal {
     text: string,
     textColor?: number,
     titleColor?: number,
+    frameColor?: number,
     justify?: "start" | "center" | "end",
     align?: "start" | "center" | "end",
+    maxWidth?: number,
   }) {
-    let maxWidth = 20;
-
     let titleLines = textToLines(title, maxWidth);
     let textLines = textToLines(text, maxWidth);
 
@@ -149,9 +204,17 @@ export class Terminal {
     if (align === "center") y -= height / 2;
     else if (align === "end") y -= height;
 
-    this.box(x - 1, y - 1, width + 2, height + 2, Colors.Grey2);
-    this.write(x, y - 1, title, titleColor, width);
-    this.write(x, y, text, textColor, width);
+    this.box(x - 1, y - 1, width + 2, height + 2, frameColor);
+
+    this.write(x, y - 1, title, {
+      fg: titleColor,
+      maxLineLength: width,
+    });
+
+    this.write(x, y, text, {
+      fg: textColor,
+      maxLineLength: width,
+    });
   }
 
   box(x: number, y: number, w: number, h: number, fg: number = 1) {
@@ -202,16 +265,6 @@ export abstract class Panel {
   }
 
   abstract renderPanel(terminal: Terminal): void;
-}
-
-export interface Glyph {
-  char: string;
-  fg: number;
-  bg?: number;
-}
-
-export function Glyph(char: string, fg: number, bg?: number): Glyph {
-  return { char, fg, bg };
 }
 
 export interface Font {
@@ -466,4 +519,46 @@ export function debugDot(terminal: Terminal, x: number, y: number, value: number
     let fg = DEBUG_COLOR_SCALE[index] || Colors.White;
     terminal.put(x, y, ".", fg);
   }
+}
+
+export class TextBuilder {
+  string: string = "";
+
+  text(text: string | number) {
+    this.string += text;
+    return this;
+  }
+
+  glyph(glyph: Glyph) {
+    return this
+      .color(glyph.fg, glyph.bg)
+      .text(glyph.char)
+      .reset();
+  }
+
+  color(fg: number, bg?: number) {
+    if (bg == null) {
+      this.string += `{${fg}}`;
+    } else {
+      this.string += `{${fg}:${bg}}`;
+    }
+    return this;
+  }
+
+  reset() {
+    this.string += "{/}";
+    return this;
+  }
+
+  percent(num: number) {
+    return this.text(Math.floor(num * 100) + "%");
+  }
+
+  toString() {
+    return this.string;
+  }
+}
+
+export function fmt(str: string = "") {
+  return new TextBuilder().text(str);
 }

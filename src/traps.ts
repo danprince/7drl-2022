@@ -1,9 +1,7 @@
 import { Direction, Point } from "silmarils";
-import { Chars } from "./chars";
+import { Glyph, Chars, Colors } from "./common";
 import { Entity, Speeds, StatusGlyphs, DamageType, Stat, Damage } from "./game";
 import { directionToGridVector } from "./helpers";
-import { Glyph } from "./terminal";
-import { Colors } from "./ui";
 
 export abstract class DirectionalTriggerTrap<DirectionType extends Direction.Direction> extends Entity {
   abstract directions: DirectionType[];

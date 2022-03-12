@@ -1,10 +1,11 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
-import { Chars } from "./chars";
-import { DealDamageEvent, DeathEvent, DespawnEvent, EventHandler, GainCurrencyEvent, GameEvent, InteractEvent, KillEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
-import { Constructor, dijkstra, DijkstraMap, directionToGridVector, OneOrMore } from "./helpers";
-import { Glyph, Terminal } from "./terminal";
-import { Colors, UI } from "./ui";
+import { Glyph, Chars } from "./common";
+import { DealDamageEvent, DeathEvent, DespawnEvent, EnterLevelEvent, EventHandler, ExitLevelEvent, GainCurrencyEvent, GameEvent, InteractEvent, KillEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
+import { Constructor, DijkstraMap, directionToGridVector, OneOrMore } from "./helpers";
+import { Terminal } from "./terminal";
+import { Colors } from "./common";
 import { Digger } from "./digger";
+import { MessageLogHandler } from "./handlers";
 
 const ENERGY_REQUIRED_PER_TURN = 12;
 
@@ -20,20 +21,26 @@ const defaultMovementOptions: MovementOptions = {
 };
 
 export class Game extends EventHandler {
-  ui: UI = null!;
   level: Level = null!;
   player: Player = null!;
   messages: GameMessage[] = [];
-  handlers: EventHandler[] = [];
   turns: number = 0;
   floor: number = 0;
+  vestigePool: Vestige[] = [];
+  globalEventHandlers: EventHandler[] = [
+    new MessageLogHandler()
+  ];
+
+  addVestigeToPool(vestige: Vestige) {
+    this.vestigePool.push(vestige);
+  }
 
   onEvent(event: GameEvent): void {
     if (this.level) {
       event.sendTo(this.level);
     }
 
-    for (let handler of this.handlers) {
+    for (let handler of this.globalEventHandlers) {
       event.sendTo(handler);
     }
   }
@@ -42,9 +49,9 @@ export class Game extends EventHandler {
     this.floor += 1;
     this.level = level;
     this.level.autotile();
-    this.player.pos = Point.clone(level.entrance);
+    this.player.pos = Point.clone(level.entrancePoint);
     this.level.addEntity(this.player);
-    game.log(this.level.type.name);
+    this.level.enter();
   }
 
   setPlayer(player: Player) {
@@ -137,14 +144,22 @@ export class Level extends EventHandler {
   tiles: (Tile | undefined)[] = [];
   fx: FX[] = [];
   effects: Effect[] = [];
-  entrance: Point.Point = { x: -1, y: -1 };
-  exit: Point.Point = { x: -1, y: -1 };
+  entrancePoint: Point.Point = { x: -1, y: -1 };
+  exitPoint: Point.Point = { x: -1, y: -1 };
 
   constructor(type: LevelType, width: number, height: number) {
     super();
     this.type = type;
     this.width = width;
     this.height = height;
+  }
+
+  enter() {
+    new EnterLevelEvent(this).dispatch();
+  }
+
+  exit() {
+    new ExitLevelEvent(this).dispatch();
   }
 
   onEvent(event: GameEvent): void {
@@ -283,6 +298,15 @@ export class Level extends EventHandler {
       }
     }
     return points;
+  }
+
+  hasKilledAllMonsters() {
+    return this.entities.every(entity => {
+      return (
+        entity === game.player ||
+        entity.dead
+      );
+    })
   }
 }
 
@@ -897,6 +921,7 @@ export class Player extends Entity {
   molten = false;
   ability: Ability | undefined;
   vestiges: Vestige[] = [];
+  hasKey: boolean = false;
   currency = 0;
 
   onEvent(event: GameEvent): void {
@@ -1051,6 +1076,7 @@ export abstract class Vestige extends EventHandler {
   abstract name: string;
   abstract description: string;
   abstract glyph: Glyph;
+  abstract price: number;
 
   onAdded() {}
   onRemoved() {}

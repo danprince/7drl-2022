@@ -1,10 +1,12 @@
 import { Direction, Point, Vector } from "silmarils";
-import { Chars } from "./chars";
+import { Glyph, Chars, Colors } from "./common";
+import { ExitLevelEvent, GameEvent } from "./events";
 import { Game, PlayerAction } from "./game";
 import { delayAnimationFrame, directionToGridVector, getDirectionChar } from "./helpers";
 import { MessagesPanel, SidebarPanel, TopBarPanel, ViewportPanel } from "./panels";
-import { Glyph, Terminal } from "./terminal";
-import { View, Colors } from "./ui";
+import { RewardsView } from "./rewards";
+import { Terminal } from "./terminal";
+import { View } from "./ui";
 
 export class GameView extends View {
   fps = 40;
@@ -16,7 +18,6 @@ export class GameView extends View {
 
   constructor(private game: Game) {
     super();
-    game.ui = this.ui;
     this.start();
   }
 
@@ -48,6 +49,12 @@ export class GameView extends View {
     this.messages.render(terminal);
     this.sideBar.render(terminal);
     this.topBar.render(terminal);
+  }
+
+  onGameEvent(event: GameEvent): boolean | void {
+    if (event.is(ExitLevelEvent)) {
+      this.ui.open(new RewardsView());
+    }
   }
 
   onKeyDown(event: KeyboardEvent) {

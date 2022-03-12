@@ -1,9 +1,7 @@
 import { Direction, RNG } from "silmarils";
-import { Chars } from "./chars";
 import { InteractEvent } from "./events";
 import { Damage, DamageType, Entity, Speeds, Stat, UpdateResult } from "./game";
-import { Glyph } from "./terminal";
-import { Colors } from "./ui";
+import { Glyph, Chars, Colors } from "./common";
 
 export class Slime extends Entity {
   name = "Slime";

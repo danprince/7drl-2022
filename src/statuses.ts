@@ -1,10 +1,8 @@
-import { Chars } from "./chars";
+import { Glyph, Chars, Colors } from "./common";
 import { DealDamageEvent, TakeDamageEvent } from "./events";
 import { DamageType, Status } from "./game";
 import { assert } from "./helpers";
 import { Fire } from "./substances";
-import { Glyph } from "./terminal";
-import { Colors } from "./ui";
 
 export class Molten extends Status {
   name = "Molten";
@@ -110,10 +108,4 @@ export class Poisoned extends Status {
       });
     }
   }
-}
-
-export class FoundKey extends Status {
-  name = "Key";
-  glyph = Glyph(Chars.Key, Colors.Orange);
-  description = "You found the key";
 }

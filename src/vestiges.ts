@@ -1,15 +1,14 @@
 import { RNG } from "silmarils";
 import { Damage, DamageType, Tile, Vestige } from "./game";
 import { Poisoned, Stunned } from "./statuses";
-import { Glyph } from "./terminal";
-import { Colors } from "./ui";
+import { fmt } from "./terminal";
+import { Glyph, Colors, Chars, Glyphs } from "./common";
 import { assert, percentToString } from "./helpers";
 import * as Tiles from "./tiles";
 import * as Substances from "./substances";
 import * as Statuses from "./statuses";
 import * as Effects from "./effects";
 import * as Events from "./events";
-import { Chars } from "./chars";
 import { Blowpipe } from "./abilities";
 
 const MELEE = `{1}${Chars.Fist}{/}`;
@@ -26,6 +25,7 @@ export class Bores extends Vestige {
   name = "Bores";
   description = "Dig through walls";
   glyph = Glyph(Chars.Spade, Colors.Grey3);
+  price = 15;
 
   onTileBump({ tile }: Events.TileBumpEvent): void {
     if (tile.type.diggable) {
@@ -36,14 +36,21 @@ export class Bores extends Vestige {
   }
 }
 
-export class PoisonKnuckles extends Vestige {
-  name = "Poison Knuckles";
+export class Slimefist extends Vestige {
+  name = "Slimefist";
   glyph = Glyph(Chars.Fist, Colors.Green);
   chance = 0.1;
   turns = 3;
+  price = 5;
 
   get description() {
-    return `${GOOD}${percentToString(this.chance)}${RESET} chance to ${POISON} with ${MELEE}`;
+    return fmt()
+      .percent(this.chance)
+      .text(" to ")
+      .glyph(Glyphs.Poison)
+      .text(" with ")
+      .glyph(Glyphs.Melee)
+      .toString();
   }
 
   onMeleeDamage(damage: Damage): void {
@@ -54,14 +61,21 @@ export class PoisonKnuckles extends Vestige {
   }
 }
 
-export class OnyxKnuckles extends Vestige {
-  name = "Onyx Knuckles";
-  glyph = Glyph(Chars.Fist, Colors.Blue2);
+export class OutCold extends Vestige {
+  name = "Out Cold";
+  glyph = Glyph(Chars.Fist, Colors.Blue3);
   chance = 0.1;
   turns = 3;
+  price = 3;
 
   get description() {
-    return `${GOOD}${percentToString(this.chance)}${RESET} chance to ${STUN} with ${MELEE}`;
+    return fmt()
+      .percent(this.chance)
+      .text(" to ")
+      .glyph(Glyphs.Stun)
+      .text(" with ")
+      .glyph(Glyphs.Melee)
+      .toString();
   }
 
   onMeleeDamage(damage: Damage): void {
@@ -71,24 +85,13 @@ export class OnyxKnuckles extends Vestige {
   }
 }
 
-export class StoneKnuckles extends Vestige {
-  name = "Stone Knuckles";
-  description = `${MELEE} attacks cause ${KNOCKBACK}`;
-  glyph = Glyph(Chars.Fist, Colors.Grey3);
-  chance = 0.1;
-  turns = 3;
-
-  onMeleeDamage(damage: Damage): void {
-    damage.knockback = true;
-  }
-}
-
 export class Tectonic extends Vestige {
   name = "Tectonic";
   glyph = Glyph(Chars.NorthEast, Colors.Blue);
   description = `Attacks cause ${KNOCKBACK}`;
   chance = 0.1;
   turns = 3;
+  price = 3;
 
   onDealDamage({ damage }: Events.DealDamageEvent): void {
     damage.knockback = true;
@@ -100,6 +103,7 @@ export class Pyroclastic extends Vestige {
   glyph = Glyph(Chars.Fist, Colors.Orange3, Colors.Orange1);
   chance = 0.1;
   description = `${percentToString(this.chance)} chance for ${MELEE} to create {10}magma`;
+  price = 10;
 
   onMeleeDamage(damage: Damage): void {
     if (RNG.chance(this.chance)) {
@@ -117,8 +121,18 @@ export class Cyclical extends Vestige {
 
   name = "Cyclical";
   glyph = Glyph(Chars.Loop, Colors.Red);
-  description = `Regain {30}\x03{/} each ${this.turnsPerCharge} turns`;
   timer = 0;
+  price = 3;
+
+  get description() {
+    return fmt()
+      .text("Gain ")
+      .glyph(Glyphs.HP)
+      .text(" every ")
+      .text(this.turnsPerCharge)
+      .glyph(Glyphs.Turns)
+      .toString();
+  }
 
   onUpdate(): void {
     this.timer += 1;
@@ -140,6 +154,7 @@ export class Vessel extends Vestige {
   glyph = Glyph(Chars.Skull, Colors.White);
   description = `Prevent death itself`;
   used = false;
+  price = 3;
 
   onDeath(): void {
     if (!this.used) {
@@ -154,6 +169,7 @@ export class Incendiary extends Vestige {
   name = "Incendiary";
   glyph = Glyph(Chars.Fire, Colors.Orange, Colors.Red1);
   description = `Explode when you become molten`;
+  price = 3;
 
   onStatusAdded({ status }: Events.StatusAddedEvent): void {
     if (status instanceof Statuses.Molten) {
@@ -177,6 +193,7 @@ export class MoloksEye extends Vestige {
   name = "Molok's Eye";
   glyph = Glyph(Chars.Eye, Colors.Red);
   description = `${GOOD}${this.multiplier}x${RESET} ${MELEE} when ${HP} is ${GOOD}full`;
+  price = 3;
 
   onMeleeDamage(damage: Damage): void {
     assert(this.owner.hp, "hp required");
@@ -191,6 +208,7 @@ export class MoloksFist extends Vestige {
   name = "Molok's Fist";
   glyph = Glyph(Chars.Fist, Colors.Red);
   description = `${GOOD}${this.multiplier}x${RESET} ${MELEE} when ${HP} is {1}1`;
+  price = 3;
 
   onMeleeDamage(damage: Damage): void {
     assert(this.owner.hp, "hp required");
@@ -204,6 +222,7 @@ export class Spitfire extends Vestige {
   name = "Spitfire";
   glyph = Glyph(Chars.Missile, Colors.Orange3, Colors.Red2);
   description = `Blowpipe sets targets on fire`;
+  price = 3;
 
   onDealDamage(event: Events.DealDamageEvent): void {
     // TODO: How to restrict this to only damage coming from the blowpipe
@@ -220,6 +239,7 @@ export class Siphon extends Vestige {
   name = "Siphon";
   glyph = Glyph(Chars.Magic, Colors.Orange3);
   description = `Draw from adjacent ${FISSURE}`;
+  price = 3;
 
   onTileEnter({ tile }: Events.TileEnterEvent): void {
     // TODO: Suck up any substances from adjacent tiles, not just fissures
@@ -230,6 +250,7 @@ export class Alchemical extends Vestige {
   name = "Alchemical";
   glyph = Glyph(Chars.Skull, Colors.Green);
   description = `Immune to ${POISON}`;
+  price = 3;
 
   onStatusAdded({ status }: Events.StatusAddedEvent): void {
     if (status instanceof Statuses.Poisoned) {
@@ -240,8 +261,9 @@ export class Alchemical extends Vestige {
 
 export class Hyperaware extends Vestige {
   name = "Hyperaware";
-  glyph = Glyph(Chars.Skull, Colors.Blue3);
+  glyph = Glyph(Chars.Skull, Colors.Blue2);
   description = `Immune to ${STUN}`;
+  price = 3;
 
   onStatusAdded({ status }: Events.StatusAddedEvent): void {
     if (status instanceof Statuses.Stunned) {
@@ -254,6 +276,7 @@ export class Leech extends Vestige {
   name = "Leech";
   glyph = Glyph(Chars.Worm, Colors.Red3);
   description = `Gain ${HP} on ${KILL}`;
+  price = 3;
 
   onKill(events: Events.KillEvent): void {
     assert(this.owner.hp, "hp required");
@@ -263,6 +286,7 @@ export class Leech extends Vestige {
 
 export class Climber extends Vestige {
   name = "Climber";
-  glyph = Glyph(Chars.Stairs, Colors.Red3);
+  glyph = Glyph(Chars.Upstairs, Colors.Red3);
   description = `Gain ${HP} when you leave a level`;
+  price = 3;
 }
