@@ -1,4 +1,6 @@
-import { DeathEvent, EventHandler, StatusAddedEvent, TakeDamageEvent } from "./events";
+import { Chars } from "./chars";
+import { DeathEvent, EventHandler, GainCurrencyEvent, StatusAddedEvent, TakeDamageEvent } from "./events";
+import { Glyph } from "./terminal";
 import { Colors } from "./ui";
 
 export class MessageLogHandler extends EventHandler {
@@ -39,5 +41,9 @@ export class MessageLogHandler extends EventHandler {
     } else {
       game.log(entity, "is now", status);
     }
+  }
+
+  onGainCurrency(event: GainCurrencyEvent): void {
+    game.log("You find", Glyph(Chars.Obsidian, Colors.Grey2), event.amount);
   }
 }

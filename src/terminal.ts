@@ -414,17 +414,56 @@ export function textToLines(text: string, maxLineLength: number) {
   return lines;
 }
 
-/**
- * When visualizing a grid of values its not possible to draw multiple
- * digits for each cell. This function renders the ones column as a single
- * digit and uses a color code to represent the tens column.
- */
-export function putDebugDigit(terminal: Terminal, x: number, y: number, value: number) {
-  let scale = [Colors.Blue, Colors.Turquoise, Colors.Green, Colors.Orange, Colors.Red, Colors.Pink];
+const DEBUG_RADIX = 10;
+const DEBUG_COLOR_SCALE = [
+  Colors.Blue,
+  Colors.Turquoise,
+  Colors.Green,
+  Colors.Orange,
+  Colors.Red,
+  Colors.Pink,
+];
+
+export function debugBigDigit(terminal: Terminal, x: number, y: number, value: number) {
   if (isFinite(value)) {
-    let digit = String(value % 10);
-    let tens = Math.floor(value / 10);
-    let fg = scale[tens] || Colors.White;
+    let digit = (value % DEBUG_RADIX).toString(DEBUG_RADIX);
+    let column = Math.floor(value / DEBUG_RADIX);
+    let fg = DEBUG_COLOR_SCALE[column] || Colors.White;
     terminal.put(x, y, digit, fg);
+
+    // Show the full value on mouseover
+    if (terminal.isPointerOver(x, y)) {
+      let label = value.toString(DEBUG_RADIX);
+      if (fg === Colors.White) fg = Colors.Black;
+      terminal.print(x - label.length + 1, y, label, Colors.White, fg);
+    }
+  }
+}
+
+export function debugDigit(terminal: Terminal, x: number, y: number, value: number) {
+  let digit = value % DEBUG_RADIX;
+  let fg = DEBUG_COLOR_SCALE[digit] || Colors.White;
+  terminal.put(x, y, digit.toString(DEBUG_RADIX), fg);
+}
+
+export function debugPercent(terminal: Terminal, x: number, y: number, value: number) {
+  // Scale percentages into the range 0-10
+  let digit = Math.round(value * DEBUG_RADIX);
+  let fg = DEBUG_COLOR_SCALE[digit] || Colors.White;
+  terminal.put(x, y, digit.toString(DEBUG_RADIX), fg);
+
+  // Show the full value on mouseover
+  if (terminal.isPointerOver(x, y)) {
+    let label = `${value * 100 | 0}%`;
+    if (fg === Colors.White) fg = Colors.Black;
+    terminal.print(x - label.length + 1, y, label, Colors.White, fg);
+  }
+}
+
+export function debugDot(terminal: Terminal, x: number, y: number, value: number) {
+  if (isFinite(value)) {
+    let index = value % DEBUG_RADIX;
+    let fg = DEBUG_COLOR_SCALE[index] || Colors.White;
+    terminal.put(x, y, ".", fg);
   }
 }

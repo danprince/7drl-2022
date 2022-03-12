@@ -111,3 +111,9 @@ export class Poisoned extends Status {
     }
   }
 }
+
+export class FoundKey extends Status {
+  name = "Key";
+  glyph = Glyph(Chars.Key, Colors.Orange);
+  description = "You found the key";
+}

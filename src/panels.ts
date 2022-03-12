@@ -1,19 +1,12 @@
 import { Array2D } from "silmarils";
 import { Chars } from "./chars";
+import { debuggingRenderer as designerDebuggingRenderer } from "./designer";
 import { Ability, DamageType, Entity, Stat, Status, Tile } from "./game";
 import { glyphToString } from "./helpers";
-import { Panel, putDebugDigit, singleLineLength, Terminal } from "./terminal";
-import { Colors, View } from "./ui";
-
-type DebuggingRenderer = (terminal: Terminal) => any;
+import { Glyph, Panel, debugBigDigit, singleLineLength, Terminal } from "./terminal";
+import { Colors } from "./ui";
 
 export class ViewportPanel extends Panel {
-  static debuggingRenderers: DebuggingRenderer[] = [];
-
-  static addDebuggingRenderer(renderer: DebuggingRenderer) {
-    this.debuggingRenderers.push(renderer);
-  }
-
   dijkstraMapsEnabled = false;
 
   put(terminal: Terminal, x: number, y: number, ch: string, fg: number, bg?: number) {
@@ -89,9 +82,8 @@ export class ViewportPanel extends Panel {
       this.drawShortestPath(terminal);
     }
 
-    for (let renderer of ViewportPanel.debuggingRenderers) {
-      renderer(terminal);
-    }
+    // Render anything that the level designer wants to debug
+    designerDebuggingRenderer(terminal);
   }
 
   drawShortestPath(terminal: Terminal) {
@@ -112,7 +104,7 @@ export class ViewportPanel extends Panel {
     for (let y = 0; y < game.level.height; y++) {
       for (let x = 0; x < game.level.width; x++) {
         let cost = Array2D.get(map.costSoFar, x, y)!;
-        putDebugDigit(terminal, x, y, cost);
+        debugBigDigit(terminal, x, y, cost);
       }
     }
   }
@@ -208,10 +200,13 @@ export class MessagesPanel extends Panel {
             });
           }
           tx += 1;
-        } else {
+        } else if (typeof part === "string" || typeof part === "number") {
           let text = part.toString();
           terminal.write(tx, ty, text, color);
           tx += singleLineLength(text);
+        } else {
+          terminal.putGlyph(tx, ty, part);
+          tx += 1;
         }
 
         tx += 1;
@@ -251,50 +246,72 @@ export class TopBarPanel extends Panel {
   renderPopup = () => {};
   _x = 0;
 
-  drawHitpointsPopup(terminal: Terminal, x: number, y: number) {
-    terminal.popup({
-      x,
-      y,
-      title: "Hitpoints",
-      text: "If these run out, the game is over."
-    });
-  }
+  renderPanel(terminal: Terminal): void {
+    let { hp, ability, statuses, currency } = game.player;
 
-  drawStatusPopup(terminal: Terminal, status: Status, x: number, y: number) {
-    terminal.popup({
-      x,
-      y,
-      title: status.name,
-      text: status.description,
-    });
-  }
+    this.renderPopup = () => {};
 
-  renderStatusIcons(terminal: Terminal, statuses: Status[]) {
+    this._x = 0;
+
+    this.renderIcon(
+      terminal,
+      Glyph(Chars.Heart, Colors.Red),
+      String(hp.current),
+      (x, y) => terminal.popup({
+        x,
+        y,
+        title: "Hitpoints",
+        text: "If these run out, the game is over.",
+      }),
+    );
+
+    this.renderIcon(
+      terminal,
+      Glyph(Chars.Obsidian, Colors.Grey2),
+      String(currency),
+      (x, y) => terminal.popup({
+        x,
+        y,
+        title: "Obsidian",
+        text: "The shards seem valuable",
+      }),
+    );
+
     for (let status of statuses) {
-      let turns = String(status.turns);
-      let width = 1 + turns.length;
-      terminal.putGlyph(this._x, 0, status.glyph);
-      terminal.print(this._x + 1, 0, turns, Colors.White);
-
-      if (terminal.isPointerOver(this._x, 0, width, 1)) {
-        let px = this._x;
-        this.renderPopup = () => this.drawStatusPopup(terminal, status, px, 2);
-      }
-
-      this._x += width + 1;
+      this.renderIcon(
+        terminal,
+        status.glyph,
+        isFinite(status.turns) ? String(status.turns) : "",
+        (x, y) => terminal.popup({
+          x,
+          y,
+          title: status.name,
+          text: status.description,
+        }),
+      );
     }
+
+    if (ability) {
+      this.renderAbility(terminal, ability);
+    }
+
+    this.renderPopup();
   }
 
-  renderHitpoints(terminal: Terminal, hp: Stat) {
-    let _hp = String(hp.current);
-    terminal.put(0, 0, Chars.Heart, Colors.Red);
-    terminal.print(1, 0, _hp, Colors.White);
+  renderIcon(
+    terminal: Terminal,
+    glyph: Glyph,
+    label: string,
+    popup: (x: number, y: number) => void
+  ) {
+    let x = this._x;
+    terminal.putGlyph(x, 0, glyph);
+    terminal.print(x + 1, 0, label, Colors.White);
+    this._x = 1 + label.length + 1;
 
-    if (terminal.isPointerOver(0, 0, 1 + _hp.length, 1)) {
-      this.renderPopup = () => this.drawHitpointsPopup(terminal, 0, 2);
+    if (terminal.isPointerOver(x, 0, 1 + label.length, 1)) {
+      this.renderPopup = () => popup(x, 2);
     }
-
-    this._x = _hp.length + 2;
   }
 
   renderAbility(terminal: Terminal, ability: Ability) {
@@ -303,36 +320,17 @@ export class TopBarPanel extends Panel {
     let bg = usable ? ability.glyph.bg : Colors.Grey1;
 
     let x1 = terminal.width - 1;
-    let x0 = terminal.width - ability.name.length - 2;
     terminal.put(x1, 0, ability.glyph.char, fg, bg);
-    terminal.print(x0, 0, ability.name, fg);
 
     if (terminal.isPointerOver(x1, 0)) {
       terminal.popup({
         x: x1,
-        y: 1,
+        y: 2,
         align: "start",
         justify: "end",
+        title: ability.name,
         text: ability.description,
       });
     }
-  }
-
-  renderPanel(terminal: Terminal): void {
-    let { hp, ability, statuses } = game.player;
-
-    this.renderPopup = () => {};
-
-    this.renderHitpoints(terminal, hp);
-
-    if (statuses.length) {
-      this.renderStatusIcons(terminal, statuses);
-    }
-
-    if (ability) {
-      this.renderAbility(terminal, ability);
-    }
-
-    this.renderPopup();
   }
 }

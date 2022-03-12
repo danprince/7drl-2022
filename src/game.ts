@@ -1,14 +1,14 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
 import { Chars } from "./chars";
-import { DealDamageEvent, DeathEvent, DespawnEvent, EventHandler, GameEvent, InteractEvent, KillEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
-import { Constructor, dijkstra, directionToGridVector, OneOrMore } from "./helpers";
+import { DealDamageEvent, DeathEvent, DespawnEvent, EventHandler, GainCurrencyEvent, GameEvent, InteractEvent, KillEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
+import { Constructor, dijkstra, DijkstraMap, directionToGridVector, OneOrMore } from "./helpers";
 import { Glyph, Terminal } from "./terminal";
 import { Colors, UI } from "./ui";
 import { Digger } from "./digger";
 
 const ENERGY_REQUIRED_PER_TURN = 12;
 
-export type GameMessageComponent = string | number | Entity | DamageType | Status | Tile;
+export type GameMessageComponent = string | number | Glyph | Entity | DamageType | Status | Tile;
 export type GameMessage = GameMessageComponent[];
 
 interface MovementOptions {
@@ -99,9 +99,11 @@ export interface LevelCharacteristics {
   defaultWallTile: TileType;
   defaultLiquidTile: TileType;
   defaultDoorTile: TileType;
-  commonEntityTypes: OneOrMore<Constructor<Entity>>;
-  uncommonEntityTypes: OneOrMore<Constructor<Entity>>;
-  rareEntityTypes: OneOrMore<Constructor<Entity>>;
+  commonMonsterTypes: OneOrMore<Constructor<Entity>>;
+  uncommonMonsterTypes: OneOrMore<Constructor<Entity>>;
+  rareMonsterTypes: OneOrMore<Constructor<Entity>>;
+  baseMonsterSpawnChance: number;
+  maxRewards: number;
 }
 
 export class LevelType extends EventHandler {
@@ -193,6 +195,7 @@ export class Level extends EventHandler {
   }
 
   removeEntity(entity: Entity) {
+    console.log(this.entities.indexOf(entity))
     this.entities.splice(this.entities.indexOf(entity), 1);
   }
 
@@ -256,13 +259,14 @@ export class Level extends EventHandler {
   }
 
   getDijkstraMap(start: Point.Point) {
-    return dijkstra(
+    return new DijkstraMap(
       this.width,
       this.height,
       start,
       (_, pos) => {
         let tile = this.getTile(pos.x, pos.y);
-        return tile?.type.walkable ? 1 : Infinity;
+        if (tile == null) return Infinity;
+        return tile.type.getMovementCost();
       }
     );
   }
@@ -297,6 +301,7 @@ interface TileTypeProps extends Partial<EventHandler> {
   glyph: TileType["glyph"];
   autotiling?: TileType["autotiling"];
   diggable?: TileType["diggable"];
+  destructible?: TileType["destructible"];
   flyable?: TileType["flyable"];
   liquid?: TileType["liquid"];
   flammable?: TileType["flammable"];
@@ -310,6 +315,7 @@ export class TileType extends EventHandler {
   walkable: boolean;
   flyable: boolean;
   diggable: boolean;
+  destructible: boolean;
   flammable: boolean;
   liquid: boolean;
 
@@ -320,6 +326,7 @@ export class TileType extends EventHandler {
     flyable,
     diggable,
     flammable,
+    destructible,
     liquid,
     ...events
   }: TileTypeProps) {
@@ -331,6 +338,7 @@ export class TileType extends EventHandler {
     this.flyable = flyable || false;
     this.diggable = diggable || false;
     this.flammable = flammable || false;
+    this.destructible = destructible || false;
     this.liquid = liquid || false;
   }
 
@@ -347,6 +355,19 @@ export class TileType extends EventHandler {
     } else {
       return { ...this.glyph };
     }
+  }
+
+  getMovementCost(): number {
+    if (this.walkable) return 1;
+    return Infinity;
+  }
+
+  getTraversalCost(): number {
+    if (this.walkable) return 1;
+    if (this.destructible) return 10;
+    if (this.diggable) return 20;
+    if (this.flammable) return 20;
+    return Infinity;
   }
 }
 
@@ -372,6 +393,9 @@ export class Tile {
 
   onEnter(entity: Entity) {
     this.substance?.onEnter(entity);
+  }
+
+  onBump(entity: Entity) {
   }
 
   update() {
@@ -783,6 +807,7 @@ export abstract class Entity extends EventHandler {
     // Can't walk into solid tiles
     if (!tile.type.walkable && !tile.type.liquid) {
       new TileBumpEvent(this, tile).dispatch();
+      tile.onBump(this);
       this.didMove = false;
       return false;
     }
@@ -872,6 +897,7 @@ export class Player extends Entity {
   molten = false;
   ability: Ability | undefined;
   vestiges: Vestige[] = [];
+  currency = 0;
 
   onEvent(event: GameEvent): void {
     super.onEvent(event);
@@ -883,6 +909,12 @@ export class Player extends Entity {
     if (this.ability) {
       event.sendTo(this.ability);
     }
+  }
+
+  addCurrency(amount: number) {
+    let event = new GainCurrencyEvent(amount);
+    event.dispatch();
+    this.currency += event.amount;
   }
 
   setAbility(ability: Ability) {

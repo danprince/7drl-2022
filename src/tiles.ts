@@ -91,6 +91,16 @@ export let Doorway = new TileType({
   glyph: Glyph(Chars.Doorway, Colors.Blue),
 });
 
+export let Upstairs = new TileType({
+  walkable: true,
+  glyph: Glyph(Chars.Upstairs, Colors.Blue),
+});
+
+export let Downstairs = new TileType({
+  walkable: true,
+  glyph: Glyph(Chars.Downstairs, Colors.Grey3),
+});
+
 export let Fissure = new TileType({
   walkable: true,
   flyable: true,
@@ -110,7 +120,7 @@ export let VolcanicFloor = new TileType({
   flyable: true,
   glyph: {
     char: Chars.Diagonals,
-    fg: [Colors.Grey1],
+    fg: [Colors.Red2],
   },
 });
 
@@ -118,7 +128,7 @@ export let VolcanicWall = new TileType({
   diggable: true,
   glyph: {
     char: Chars.Walls,
-    fg: [Colors.Grey3],
+    fg: [Colors.Red4],
   },
 });
 

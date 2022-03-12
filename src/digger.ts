@@ -119,9 +119,9 @@ export class Digger {
       for (let x = 0; x < this.width; x++) {
         let dist = Point.distance(center, { x, y });
         let bias = dist / maxDist + additiveChance;
-        this.grid[x + y * this.width] = PRNG.chance(this.rng, bias)
-          ? Marker.Wall
-          : Marker.Floor;
+        if (PRNG.chance(this.rng, bias)) {
+          this.grid[x + y * this.width] = Marker.Wall;
+        }
       }
     }
 
@@ -190,7 +190,8 @@ export class Digger {
     deathChance = 0,
     turnChance = 0.1,
     mutationChance = 0,
-    directions = Direction.CARDINAL_DIRECTIONS,
+    initialDirections = Direction.CARDINAL_DIRECTIONS,
+    turns = [Direction.rotateLeft90, Direction.rotateRight90],
     symmetry = Symmetry.None,
     maxTunnelers = 10,
   }: {
@@ -201,13 +202,14 @@ export class Digger {
     deathChance?: number;
     turnChance?: number;
     mutationChance?: number;
-    directions?: Direction.Direction[];
+    initialDirections?: Direction.Direction[];
+    turns?: ((dir: Direction.Direction) => Direction.Direction)[];
     symmetry?: Symmetry;
     maxTunnelers?: number;
   }) {
     let tunnelers: Tunneler[] = [{
       pos: start,
-      dir: PRNG.element(this.rng, directions),
+      dir: PRNG.element(this.rng, initialDirections),
       spade: PRNG.element(this.rng, spades),
     }];
 
@@ -228,7 +230,7 @@ export class Digger {
         if (willSpawn) {
           let willMutate = PRNG.chance(this.rng, mutationChance);
           let pos = Point.clone(tunneler.pos);
-          let dir = willMutate ? PRNG.element(this.rng, directions) : tunneler.dir;
+          let dir = willMutate ? PRNG.element(this.rng, initialDirections) : tunneler.dir;
           let spade = willMutate ? PRNG.element(this.rng, spades) : tunneler.spade;
           tunnelers.push({ pos, dir, spade });
         }
@@ -247,13 +249,17 @@ export class Digger {
 
         let vec = directionToGridVector(tunneler.dir);
         let pos = Point.translated(tunneler.pos, vec);
+        let forceTurn = false;
 
         if (pos.x >= 0 && pos.y >= 0 && pos.x < this.width && pos.y < this.height) {
           tunneler.pos = pos;
+        } else {
+          forceTurn = true;
         }
 
-        if (PRNG.chance(this.rng, turnChance)) {
-          tunneler.dir = PRNG.element(this.rng, directions);
+        if (forceTurn || PRNG.chance(this.rng, turnChance)) {
+          let turn = PRNG.element(this.rng, turns);
+          if (turn) tunneler.dir = turn(tunneler.dir);
         }
 
         if (PRNG.chance(this.rng, mutationChance)) {
@@ -372,4 +378,13 @@ export const Spades = {
   Star: 0b101_010_101,
   Cross: 0b010_111_010,
   Circle: 0b010_101_010,
+};
+
+function rules(born: number[], survive: number[]): CellularAutomataRules {
+  return [born, survive];
+}
+
+export const CellularAutomataRules = {
+  Caves: rules([5, 6, 7, 8], [4, 5, 6, 7, 8]),
+  Smoothing: rules([8], [2, 3, 4, 5, 6, 7, 8]),
 };

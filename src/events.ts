@@ -28,6 +28,7 @@ export class EventHandler {
   onVestigeAdded(event: VestigeAddedEvent) {}
   onEnterLevel(event: EnterLevelEvent) {}
   onExitLevel(event: ExitLevelEvent) {}
+  onGainCurrency(event: GainCurrencyEvent) {}
 }
 
 export class EnterLevelEvent extends GameEvent {
@@ -304,6 +305,23 @@ export class VestigeAddedEvent extends GameEvent {
 
   dispatch() {
     this.sendTo(this.entity);
+    this.sendTo(game);
+  }
+}
+
+export class GainCurrencyEvent extends GameEvent {
+  constructor(
+    public amount: number,
+  ) {
+    super();
+  }
+
+  invoke(handler: EventHandler) {
+    return handler.onGainCurrency(this);
+  }
+
+  dispatch() {
+    this.sendTo(game.player);
     this.sendTo(game);
   }
 }

@@ -32,7 +32,7 @@ async function start() {
   LevelDesigner.setSeed(RNG.int());
 
   let game = window.game = new Game();
-  let level = designLevel(Levels.Caverns, { x: 10, y: 1 });
+  let level = designLevel(Levels.Mantle, { x: 10, y: 2 });
 
   let player = new Player();
   player.setAbility(new Abilities.Grapple());

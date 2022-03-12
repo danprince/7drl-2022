@@ -17,6 +17,7 @@ export const Chars = {
   CircleOutline: "\x0b",
   Heart: "\x0c",
   Diamond: "\x0d",
+  Key: "\x0e",
   CaretUp: "\x0f",
 
   // Icons
@@ -35,7 +36,7 @@ export const Chars = {
   Grapple: "\x1c",
   Time: "\x1d",
   Snowflake: "\x1e",
-  Stairs: "\x1f",
+  Obsidian: "\x1f",
 
   // Entities
   Creature: "\x80",
@@ -56,7 +57,10 @@ export const Chars = {
   Thwomp: "\x8f",
   Gnome: "\x90",
   GnomeKing: "\x91",
+  Slime: "\x92",
   Skeleton: "\x93",
+  Chicken: "\x94",
+  Mimic: "\x95",
 
   // Props
   Egg: "\x96",
@@ -88,6 +92,8 @@ export const Chars = {
   Ripples: "\xc3",
   Bars: "\xce",
   Doorway: "\xcf",
+  Upstairs: "\xcd",
+  Downstairs: "\xcc",
   Stalagmite: "\xdb",
   Diagonals: createCharSet(0xc8, 2),
   ThickDiagonals: createCharSet(0xca, 2),
