@@ -12,7 +12,7 @@ export class Chest extends Entity {
   name = "Chest";
   description = "";
   interactive = true;
-  glyph = Glyph(Chars.Chest, Colors.Orange);
+  glyph = Glyph(Chars.Chest, Colors.Orange2);
   mimicChance = 0.05;
   loot = (entity: Entity) => {};
 
@@ -186,8 +186,12 @@ export class Frog extends Entity {
   }
 
   getIntentGlyph(): Glyph | undefined {
-    let char = getDirectionChar(this.nextHopDirection);
-    return Glyph(char, Colors.Red);
+    if (this.status === FrogStatus.Hopping) {
+      let char = getDirectionChar(this.nextHopDirection);
+      return Glyph(char, Colors.Red);
+    } else {
+      return;
+    }
   }
 
   hop() {

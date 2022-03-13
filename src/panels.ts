@@ -152,7 +152,7 @@ export class MessagesPanel extends Panel {
     for (let i = game.messages.length - 1; i >=0; i--) {
       let message = game.messages[i];
       let current = i === game.messages.length - 1;
-      let color = current ? Colors.White : Colors.Grey4;
+      let color = current ? Colors.White : Colors.Grey3;
 
       for (const part of message) {
         // Keep a copy of this location for popups

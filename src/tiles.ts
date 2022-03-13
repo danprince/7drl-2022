@@ -16,7 +16,7 @@ export let Cobblestone = new TileType({
   flyable: true,
   glyph: {
     char: Chars.Cobbles,
-    fg: [Colors.Grey1],
+    fg: [Colors.Blue1],
   },
 });
 
@@ -34,7 +34,7 @@ export let BoneWall = new TileType({
   diggable: true,
   glyph: {
     char: Chars.BoneWalls,
-    fg: [Colors.Grey3],
+    fg: [Colors.Blue3],
   },
 });
 
