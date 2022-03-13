@@ -1,5 +1,4 @@
 import { Array2D, Direction, Point, PRNG } from "silmarils";
-import { Colors } from "./common";
 import { Digger, Marker } from "./digger";
 import { Level, LevelType, Entity, Tile, Decoration } from "./game";
 import { assert, DijkstraMap, directionToGridVector, maxBy } from "./helpers";
