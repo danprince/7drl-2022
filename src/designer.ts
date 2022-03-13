@@ -245,21 +245,6 @@ export class LevelDesigner {
     for (let reward of rewards) {
       this.setEntity(reward, reward.pos);
     }
-
-    // Turn some of the walls into treasure
-    for (let point of this.points()) {
-      let tile = this.getTile(point);
-      if (tile?.type === this.levelType.characteristics.defaultWallTile) {
-        if (PRNG.chance(this.rng, 0.05)) {
-          tile.glyph.fg = Colors.Orange; 
-          tile.onTileDig = (event) => {
-            if (event.entity === game.player) {
-              game.player.addCurrency(10);
-            }
-          };
-        }
-      }
-    }
   }
 
   generateReward() {
@@ -406,8 +391,8 @@ export class LevelDesigner {
           case Debug.DistanceFromEntrance:
             debugBigDigit(terminal, point.x, point.y, metrics.distanceFromEntrance);
             break;
-          case Debug.DistanceFromEntrance:
-            debugBigDigit(terminal, point.x, point.y, metrics.distanceFromEntrance);
+          case Debug.DistanceFromExit:
+            debugBigDigit(terminal, point.x, point.y, metrics.distanceFromExit);
             break;
           case Debug.DistanceFromCriticalPath:
             debugBigDigit(terminal, point.x, point.y, metrics.distanceFromCriticalPath);

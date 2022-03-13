@@ -228,7 +228,7 @@ export class Siphon extends Vestige {
     for (let point of Point.mooreNeighbours(tile.pos)) {
       let neighbour = game.level.getTile(point.x, point.y);
       if (neighbour && neighbour.substance) {
-        neighbour.substance.onEnter(this.owner);
+        neighbour.substance.enter(this.owner);
       }
     }
   }

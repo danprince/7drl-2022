@@ -114,21 +114,21 @@ export class Game extends EventHandler {
   }
 
   *updateEffects() {
-      if (PARALLEL_EFFECTS) {
+    if (PARALLEL_EFFECTS) {
       yield* this.updateEffectsParallel();
-      } else {
-        while (this.level.effects.length) {
-          let effects = this.level.effects;
-          this.level.effects = [];
+    } else {
+      while (this.level.effects.length) {
+        let effects = this.level.effects;
+        this.level.effects = [];
 
-          for (let effect of effects) {
-            for (let frame of effect) {
-              yield frame;
-            }
+        for (let effect of effects) {
+          for (let frame of effect) {
+            yield frame;
           }
         }
       }
     }
+  }
 
   *updateEffectsParallel() {
     let timers = new WeakMap<Effect, number>();
@@ -164,7 +164,7 @@ export class Game extends EventHandler {
 
         timers.set(effect, timer);
         this.level.effects.push(effect);
-  }
+      }
 
       // If the timestep is still infinite, than means that 
       if (isFinite(timeStep)) {
@@ -452,8 +452,16 @@ export class TileType extends EventHandler {
     this.liquid = liquid || false;
   }
 
-  onCreate(tile: Tile) {}
-  onUpdate(tile: Tile) {}
+  protected onCreate(tile: Tile) {}
+  protected onUpdate(tile: Tile) {}
+
+  create(tile: Tile) {
+    this.onCreate(tile);
+  }
+
+  update(tile: Tile) {
+    this.onUpdate(tile);
+  }
 
   assignGlyph() {
     if (isVariantGlyph(this.glyph)) {
@@ -492,7 +500,7 @@ export class Tile extends EventHandler {
     super();
     this.type = type;
     this.glyph = type.assignGlyph();
-    this.type.onCreate(this);
+    this.type.create(this);
   }
 
   neighbours(): Tile[] {
@@ -503,11 +511,11 @@ export class Tile extends EventHandler {
   }
 
   enter(entity: Entity) {
-    this.substance?.onEnter(entity);
+    this.substance?.enter(entity);
   }
 
   update() {
-    this.type.onUpdate(this);
+    this.type.update(this);
     this.substance?.update();
   }
 
@@ -1101,7 +1109,7 @@ export class Player extends Entity {
 export abstract class Substance extends EventHandler {
   abstract fg: number;
   abstract bg: number;
-  abstract defaultTimer: number;
+  defaultTimer = 5;
   char: string | undefined;
   tile: Tile = undefined!;
   timer: number = 0;
@@ -1120,20 +1128,31 @@ export abstract class Substance extends EventHandler {
     }
   }
 
+  abstract applyTo(entity: Entity): void;
+
+  enter(entity: Entity) {
+    this.applyTo(entity);
+    this.tile.removeSubstance();
+    this.onEnter(entity);
+  }
+
   update() {
     this.timer -= 1;
     if (this.timer <= 0) {
       this.tile.removeSubstance();
-      this.onRemove();
+      this.remove();
     } else {
       this.onUpdate();
     }
   }
 
-  onEnter(entity: Entity) {}
-  onExit(entity: Entity) {}
-  onRemove() {}
-  onUpdate() {}
+  remove() {
+    this.onRemove();
+  }
+
+  protected onEnter(entity: Entity) {}
+  protected onUpdate() {}
+  protected onRemove() {}
 }
 
 export abstract class Ability extends EventHandler {

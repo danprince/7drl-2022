@@ -3,6 +3,7 @@ import { Chars, Glyph } from "./common";
 import { Ability, Damage, DamageType, Substance, TargetingMode } from "./game";
 import { directionToGridVector } from "./helpers";
 import { Colors } from "./common";
+import { Explosion } from "./effects";
 
 export class Chain extends Ability {
   name = "Chain";
@@ -40,7 +41,6 @@ export class Chain extends Ability {
     //   knockback, green tip for poison, grapple tip for grapple?
     // - Does it make sense for chain to have a fully separate system for upgrades?
     //   Or could they just be done with ability specific vestiges?
-    //
 
     let tip = Point.clone(this.owner.pos);
     let vec = directionToGridVector(direction);
@@ -72,7 +72,6 @@ export class Chain extends Ability {
     // the line, then we just iterate through that instead of managing vectors.
     // And we can reverse the same line.
     while (true) {
-      yield 0.3;
       Point.translate(tip, vec);
       let tile = game.level.getTile(tip.x, tip.y);
       if (tile == null) break;
@@ -83,8 +82,11 @@ export class Chain extends Ability {
       if (entities.length) {
         for (let entity of entities) {
           this.owner.attack(entity, this.getBaseDamage());
+
+          // If there is substance on the chain then apply it to this
+          // enemy.
           if (substance) {
-            substance.onEnter(entity);
+            substance.enter(entity);
           }
         }
 
@@ -92,10 +94,22 @@ export class Chain extends Ability {
       }
     }
 
+    yield 2;
+
+    // Create an explosion
+    game.level.addEffect(Explosion({
+      pos: Point.clone(tip),
+      size: 1,
+      canTarget: () => true,
+      getGlyph: () => Glyph("*", Colors.Grey2),
+      getDamage: () => ({ type: DamageType.Explosion, amount: 1 }),
+      attacker: this.owner,
+    }));
+
     // Move the tip of the chain back to the player
     while (true) {
       Point.translate(tip, inv);
-      yield 0.5;
+      yield 1;
       if (Point.equals(tip, this.owner.pos)) {
         break;
       }
