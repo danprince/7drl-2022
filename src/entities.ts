@@ -1,6 +1,6 @@
 import { Direction, Line, Point, Raster, RNG, Vector } from "silmarils";
 import { InteractEvent, PushEvent } from "./events";
-import { Attack, Damage, DamageType, Effect, Entity, Speeds, Stat, Substance, UpdateResult } from "./game";
+import { Attack, Damage, DamageType, Effect, Entity, Speeds, Stat, Substance, UpdateResult } from "./engine";
 import { Glyph, Chars, Colors, getDirectionChar } from "./common";
 import * as Statuses from "./statuses";
 import * as Effects from "./effects";

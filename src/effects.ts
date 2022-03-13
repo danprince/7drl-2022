@@ -1,6 +1,6 @@
 import { Circle, Point, Raster, RNG, Vector } from "silmarils";
 import { Colors, Glyph } from "./common";
-import { Damage, Effect, Entity } from "./game";
+import { Damage, Effect, Entity } from "./engine";
 
 interface ExplosionParticle {
   vector: Vector.Vector;
@@ -27,6 +27,7 @@ export function* Explosion({
   let center = Point.clone(pos);
   let radius = 0;
   let particles: ExplosionParticle[] = [];
+  game
 
   let done = game.level.addFX(terminal => {
     let circle = Circle.from(center.x, center.y, radius);

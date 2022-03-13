@@ -1,7 +1,7 @@
 import { Direction, Point, Vector } from "silmarils";
 import { Chars, Colors, getDirectionChar } from "./common";
 import { ExitLevelEvent, GameEvent } from "./events";
-import { Game, PlayerAction } from "./game";
+import { PlayerAction } from "./engine";
 import { delayAnimationFrame, directionToGridVector } from "./helpers";
 import { MessagesPanel, SidebarPanel, TopBarPanel, ViewportPanel } from "./panels";
 import { RewardsView } from "./rewards";
@@ -17,7 +17,7 @@ export class GameView extends View {
   topBar = new TopBarPanel(3, 0, 21, 1);
   sideBar = new SidebarPanel(1, 2, 1, 21);
 
-  constructor(private game: Game) {
+  constructor() {
     super();
     this.start();
   }
@@ -28,7 +28,7 @@ export class GameView extends View {
 
   async loop() {
     while (true) {
-      let turnIterator = this.game.update();
+      let turnIterator = game.update();
 
       for await (let frames of turnIterator) {
         this.ui.update();
@@ -106,7 +106,7 @@ export class GameView extends View {
     }
 
     if (action) {
-      this.game.player.setNextAction(action);
+      game.player.setNextAction(action);
     }
 
     return true;
@@ -123,11 +123,11 @@ export class GameView extends View {
 
     switch (ability.targeting) {
       case "none":
-        this.game.player.setNextAction({ type: "use", target: undefined });
+        game.player.setNextAction({ type: "use", target: undefined });
         break;
       case "directional":
         this.ui.open(new DirectionTargetingView(this.viewport, target => {
-          this.game.player.setNextAction({ type: "use", target });
+          game.player.setNextAction({ type: "use", target });
         }));
         break;
     }

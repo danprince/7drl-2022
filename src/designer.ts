@@ -1,6 +1,6 @@
 import { Array2D, Direction, Point, PRNG } from "silmarils";
 import { Digger, Marker } from "./digger";
-import { Level, LevelType, Entity, Tile, Decoration } from "./game";
+import { Level, LevelType, Entity, Tile, Decoration } from "./engine";
 import { assert, DijkstraMap, directionToGridVector, maxBy } from "./helpers";
 import { debugBigDigit, debugDot, debugDigit, debugPercent, Terminal } from "./terminal";
 import * as Tiles from "./tiles";

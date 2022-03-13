@@ -1,4 +1,4 @@
-import { TileType } from "./game";
+import { TileType } from "./engine";
 import { Glyph, Colors, Chars } from "./common";
 import * as Substances from "./substances";
 

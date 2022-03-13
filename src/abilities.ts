@@ -1,6 +1,6 @@
 import { Direction, Point, Vector } from "silmarils";
 import { Chars, Glyph } from "./common";
-import { Ability, Damage, DamageType, Substance, TargetingMode } from "./game";
+import { Ability, Damage, DamageType, Substance, TargetingMode } from "./engine";
 import { directionToGridVector } from "./helpers";
 import { Colors } from "./common";
 import { Explosion } from "./effects";

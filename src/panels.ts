@@ -1,7 +1,7 @@
 import { Array2D } from "silmarils";
 import { Glyph, Chars, Colors } from "./common";
 import { debuggingRenderer as designerDebuggingRenderer } from "./designer";
-import { Ability, DamageType, Entity, Status, Tile } from "./game";
+import { Ability, DamageType, Entity, Status, Tile } from "./engine";
 import { glyphToString } from "./helpers";
 import { Panel, debugBigDigit, singleLineLength, Terminal } from "./terminal";
 

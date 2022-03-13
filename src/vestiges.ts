@@ -1,5 +1,5 @@
 import { Direction, Point, RNG } from "silmarils";
-import { DamageType, Rarity, Tile, Vestige } from "./game";
+import { DamageType, Rarity, Tile, Vestige } from "./engine";
 import { Glyph, Colors, Chars, Glyphs } from "./common";
 import { fmt } from "./terminal";
 import * as Substances from "./substances";

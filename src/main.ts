@@ -1,14 +1,15 @@
 import { RNG } from "silmarils";
-import { Game, Player, Vestige } from "./game";
+import { Player, Vestige } from "./engine";
+import { Game } from "./game";
 import { UI } from "./ui";
 import { createFont } from "./terminal";
 import { GameView } from "./views";
 import { loadImage } from "./helpers";
+import { designLevel, LevelDesigner } from "./designer";
 import fontUrl from "../font.png";
 import * as Levels from "./levels";
 import * as Abilities from "./abilities";
 import * as Vestiges from "./vestiges";
-import { designLevel, LevelDesigner } from "./designer";
 
 declare global {
   const game: Game;
@@ -51,7 +52,7 @@ async function start() {
   let assets = await preload();
   let font = createFont(assets.fontImage);
   let ui = new UI(game, font, assets.palette);
-  let view = new GameView(game);
+  let view = new GameView();
   ui.open(view);
 }
 

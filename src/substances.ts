@@ -1,5 +1,5 @@
 import { RNG } from "silmarils";
-import { Entity, Substance, Tile } from "./game";
+import { Entity, Substance, Tile } from "./engine";
 import { Colors } from "./common";
 import * as Statuses from "./statuses";
 import * as Tiles from "./tiles";

@@ -1,6 +1,6 @@
 import { Glyph, Chars, Colors } from "./common";
 import { DealDamageEvent, TakeDamageEvent } from "./events";
-import { DamageType, Status } from "./game";
+import { DamageType, Status } from "./engine";
 import { assert } from "./helpers";
 import { Fire } from "./substances";
 

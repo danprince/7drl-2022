@@ -1,7 +1,7 @@
 import { RNG } from "silmarils";
 import { Colors, Chars, Glyph, Glyphs } from "./common";
 import { designLevel } from "./designer";
-import { DamageType, Rarity, Vestige } from "./game";
+import { DamageType, Rarity, Vestige } from "./engine";
 import { Terminal, TextAlign, fmt } from "./terminal";
 import { View } from "./ui";
 import * as Levels from "./levels";
@@ -87,7 +87,7 @@ class MoneyReward implements Reward {
   }
 }
 
-function rollVestigeReward(rarity: Rarity) {
+function rollVestigeReward(rarity: Rarity): VestigeReward | undefined {
   let rareVestiges =
     game.vestigePool.filter(vestige => vestige.rarity === Rarity.Rare);
   let uncommonVestiges =
@@ -105,8 +105,13 @@ function rollVestigeReward(rarity: Rarity) {
     commonVestiges;
 
   let vestige = RNG.element(vestigeRewardPool);
-  game.removeVestigeFromPool(vestige);
-  return new VestigeReward(vestige);
+
+  if (vestige) {
+    game.removeVestigeFromPool(vestige);
+    return new VestigeReward(vestige);
+  }
+
+  return undefined;
 }
 
 function rollNextReward(): Reward {
@@ -114,13 +119,17 @@ function rollNextReward(): Reward {
   let rolledRare = RNG.chance(0.05);
   let rolledUncommon = RNG.chance(0.15);
 
-  if (rolledForVestige && game.vestigePool.length > 0) {
+  if (rolledForVestige) {
     let rarity =
       rolledRare ? Rarity.Rare :
       rolledUncommon ? Rarity.Uncommon :
       Rarity.Common;
 
-    return rollVestigeReward(rarity);
+    let reward = rollVestigeReward(rarity);
+
+    // Return here if we were able to pick a vestige. Sometimes that
+    // won't be possible (for example the pool is completely)
+    if (reward) return reward;
   }
 
   // Otherwise, we're going to get a standard reward

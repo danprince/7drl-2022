@@ -1,4 +1,4 @@
-import { Decoration, LevelCharacteristics, TileType } from "./game";
+import { Decoration, LevelCharacteristics, TileType } from "./engine";
 import * as Tiles from "./tiles";
 
 interface Legend {
