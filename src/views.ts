@@ -10,7 +10,7 @@ import { View } from "./ui";
 import { PaintingView } from "./painting";
 
 export class GameView extends View {
-  fps = 30;
+  fps = 60;
 
   viewport = new ViewportPanel(3, 2, 21, 21);
   messages = new MessagesPanel(this.viewport, 3, 24, 21, 10);
@@ -30,12 +30,12 @@ export class GameView extends View {
     while (true) {
       let turnIterator = this.game.update();
 
-      for await (let skipFrames of turnIterator) {
-        if (skipFrames > 0) {
-          await this.delayFrames(skipFrames);
-        }
-
+      for await (let frames of turnIterator) {
         this.ui.update();
+
+        if (frames > 0) {
+          await this.delayFrames(frames);
+        }
       }
     }
   }

@@ -1,7 +1,7 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
 import { Glyph, Chars } from "./common";
 import { DealDamageEvent, DeathEvent, DespawnEvent, EnterLevelEvent, EventHandler, ExitLevelEvent, GainCurrencyEvent, GameEvent, InteractEvent, KillEvent, MoveEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, TileExitEvent, VestigeAddedEvent } from "./events";
-import { Constructor, DijkstraMap, directionToGridVector, OneOrMore } from "./helpers";
+import { clamp, Constructor, DijkstraMap, directionToGridVector, OneOrMore } from "./helpers";
 import { Terminal } from "./terminal";
 import { Colors } from "./common";
 import { Digger } from "./digger";
@@ -69,18 +69,33 @@ export class Game extends EventHandler {
     this.player = player;
   }
 
-  async* update(): AsyncGenerator<number, void> {
-    // Only update the entities that existed at the start of this turn
-    let entities = [...this.level.entities];
+  log(...message: GameMessage) {
+    this.messages.push(message);
+  }
 
+  async* update(): AsyncGenerator<number, void> {
+    this.updateTiles();
+    yield* this.updateEntities();
+    // If the player is no longer acting then we need to put frames
+    // in between turns to stay responsive.
+    yield this.player.dead ? 1 : 0;
+    this.turns += 1;
+  }
+
+  updateTiles() {
     for (let tile of this.level.tiles) {
       tile?.update();
     }
+  }
+
+  async* updateEntities() {
+    // Only update the entities that existed at the start of this turn
+    let entities = [...this.level.entities];
 
     for (let entity of entities) {
       if (entity.dead) continue;
 
-      if (entity === this.player) {
+      if (entity === game.player) {
         yield 0;
       }
 
@@ -94,13 +109,13 @@ export class Game extends EventHandler {
         }
       }
 
+      yield* this.updateEffects();
+    }
+  }
+
+  *updateEffects() {
       if (PARALLEL_EFFECTS) {
-        while (this.level.effects.length) {
-          let effect = this.level.effects.shift()!;
-          let result = effect.next();
-          if (!result.done) this.level.effects.push(effect);
-          if (result.value != null) yield result.value;
-        }
+      yield* this.updateEffectsParallel();
       } else {
         while (this.level.effects.length) {
           let effects = this.level.effects;
@@ -115,15 +130,47 @@ export class Game extends EventHandler {
       }
     }
 
-    this.turns += 1;
+  *updateEffectsParallel() {
+    let timers = new WeakMap<Effect, number>();
 
-    // If the player is no longer acting then we need to put frames
-    // in between turns to stay responsive.
-    yield this.player.dead ? 1 : 0;
+    while (this.level.effects.length) {
+      let effects = this.level.effects;
+      this.level.effects = [];
+      let timeStep = Infinity;
+
+      for (let effect of effects) {
+        // The effect won't have a timer if it was just added to the queue,
+        // in which case we just use 0 as the default to ensure it will get
+        // updated during the upcoming frame.
+        let timer = timers.get(effect) ?? 0;
+
+        timer -= 1;
+
+        if (timer <= 0) {
+          // If the timer hits zero, then the current step of this effect
+          // has finished, so we should start processing the next step.
+          let result = effect.next();
+          // At this point we can check whether the effect is done and bail
+          // out if it is (this makes sure it isn't added back onto the queue).
+          if (result.done) continue;
+          // Prevent effects from using fractional/negative/infinite timers.
+          timer = Math.floor(clamp(0, result.value, 100));
+        }
+
+        // Find the minimum
+        if (timer < timeStep) {
+          timeStep = timer;
+        }
+
+        timers.set(effect, timer);
+        this.level.effects.push(effect);
   }
 
-  log(...message: GameMessage) {
-    this.messages.push(message);
+      // If the timestep is still infinite, than means that 
+      if (isFinite(timeStep)) {
+        yield timeStep;
+      }
+    }
   }
 }
 
