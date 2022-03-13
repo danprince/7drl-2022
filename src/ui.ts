@@ -3,7 +3,6 @@ import { Font, Inputs, Renderer, Terminal } from "./terminal";
 import { Game } from "./game";
 import { EventHandler, GameEvent } from "./events";
 
-
 type PopupOptions = Parameters<Terminal["drawPopup"]>[0];
 
 interface QueuedPopup {

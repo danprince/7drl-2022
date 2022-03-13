@@ -310,7 +310,7 @@ export class TopBarPanel extends Panel {
     let x = this._x;
     terminal.putGlyph(x, 0, glyph);
     terminal.print(x + 1, 0, label, Colors.White);
-    this._x = 1 + label.length + 1;
+    this._x += 1 + label.length + 1;
 
     if (terminal.isPointerOver(x, 0, 1 + label.length, 1)) {
       this.renderPopup = () => popup(x, 2);

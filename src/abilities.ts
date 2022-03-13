@@ -1,252 +1,113 @@
 import { Direction, Point, Vector } from "silmarils";
 import { Chars, Glyph } from "./common";
-import { Ability, Damage, DamageType, Effect, Entity, TargetingMode, Tile } from "./game";
-import { assert, directionToGridVector } from "./helpers";
-import { Molten, Stunned } from "./statuses";
+import { Ability, Damage, DamageType, Substance, TargetingMode } from "./game";
+import { directionToGridVector } from "./helpers";
 import { Colors } from "./common";
 
-export class Blowpipe extends Ability {
-  name = "Blowpipe";
-  description = "Shoots darts";
-  glyph = Glyph(Chars.Missile, Colors.Turquoise);
+export class Chain extends Ability {
+  name = "Chain";
+  glyph = Glyph(Chars.ChainLinkHorizontal, Colors.Grey3);
   targeting = TargetingMode.Directional;
-
-  use(direction: Direction.Direction) {
-    game.level.addEffect(this.shoot(direction));
-    return true;
-  }
-
-  canUse(): boolean {
-    return true;
-  }
-
-  onHitTile(tile: Tile, vec: Vector.Vector): boolean {
-    return true;
-  }
-
-  onHitEntities(entities: Entity[], vec: Vector.Vector): boolean {
-    for (let entity of entities) {
-      game.player.attack(entity, {
-        type: DamageType.Generic,
-        amount: 1,
-        direction: vec,
-      });
-    }
-
-    return true;
-  }
-
-  getProjectileGlyph(direction: Direction.Direction) {
-    switch (direction) {
-      case Direction.NORTH:
-      case Direction.SOUTH:
-        return Glyph("|", Colors.Grey3);
-      case Direction.EAST:
-      case Direction.WEST:
-        return Glyph("-", Colors.Grey3);
-      case Direction.NORTH_EAST:
-      case Direction.SOUTH_WEST:
-        return Glyph("/", Colors.Grey3);
-      case Direction.NORTH_WEST:
-      case Direction.SOUTH_EAST:
-        return Glyph("\\", Colors.Grey3);
-      default:
-        return Glyph("+", Colors.Grey3);
-    }
-  }
-
-  *shoot(direction: Direction.Direction): Effect {
-    let vec = directionToGridVector(direction);
-    let pos = Point.clone(game.player.pos);
-    let glyph = this.getProjectileGlyph(direction);
-
-    let done = game.level.addFX(term => {
-      term.putGlyph(pos.x, pos.y, glyph);
-    });
-
-    while (true) {
-      Point.translate(pos, vec);
-
-      yield 1;
-
-      // Check whether the projectile is stopped by a tile
-      let tile = game.level.getTile(pos.x, pos.y);
-
-      if (tile == null) break;
-
-      if (!tile.type.walkable) {
-        if (this.onHitTile(tile, vec)) {
-          break;
-        }
-      }
-
-      // Check whether it hit any entities
-      let entities = game.level.getEntitiesAt(pos.x, pos.y);
-
-      if (entities.length) {
-        if (this.onHitEntities(entities, vec)) {
-          break;
-        }
-      }
-    }
-
-    done();
-  }
-}
-
-export class Dash extends Ability {
-  name = "Dash";
-  description = "Do a dash";
-  glyph = Glyph(Chars.Boots, Colors.Orange, Colors.Orange1);
-  targeting = TargetingMode.Directional;
-
-  canUse(): boolean {
-    return game.player.hasStatus(Molten);
-  }
-
-  use(direction: Direction.Direction) {
-    game.level.addEffect(this.dash(direction));
-    game.player.removeStatusType(Molten);
-    return true;
-  }
-
-  *dash(direction: Direction.Direction): Effect {
-    let vec = directionToGridVector(direction);
-
-    while (true) {
-      let pos = Point.translated(game.player.pos, vec);
-      let entities = game.level.getEntitiesAt(pos.x, pos.y);
-
-      if (entities.length > 0) {
-        for (let entity of entities) {
-          let dmg = this.getCollisionDamage(vec);
-          game.player.attack(entity, dmg);
-        }
-
-        break;
-      }
-
-      let moved = game.player.moveTo(pos.x, pos.y);
-      if (!moved) break;
-
-      yield 1;
-    }
-  }
-
-  getCollisionDamage(vec: Vector.Vector): Damage {
-    return {
-      type: DamageType.Melee,
-      amount: 1,
-      direction: Vector.clone(vec),
-    };
-  }
-}
-
-export class Grapple extends Ability {
-  name = "Grapple";
-  description = "Pull towards you";
-  glyph = Glyph(Chars.Grapple, Colors.Blue, Colors.Blue1);
-  targeting = TargetingMode.Directional;
-
-  use(direction: Direction.Direction) {
-    game.level.addEffect(this.grapple(direction));
-    return true;
-  }
-
-  getTarget(direction: Direction.Direction): Tile | Entity | undefined {
-    let pos = Point.clone(game.player.pos);
-    let vec = directionToGridVector(direction);
-
-    while (true) {
-      Point.translate(pos, vec);
-
-      let tile = game.level.getTile(pos.x, pos.y);
-
-      if (tile && !tile.type.flyable && !tile.type.walkable) {
-        return tile;
-      }
-
-      let entities = game.level.getEntitiesAt(pos.x, pos.y);
-      if (entities.length) {
-        return entities[0];
-      }
-
-      if (!game.level.isInBounds(pos.x, pos.y)) {
-        return undefined;
-      }
-    }
-  }
+  description = "";
 
   getDirectionalChar(direction: Direction.Direction) {
     switch (direction) {
       case Direction.NORTH:
       case Direction.SOUTH:
-        return "|";
+        return Chars.ChainLinkVertical;
       case Direction.EAST:
       case Direction.WEST:
-        return "-";
+        return Chars.ChainLinkHorizontal;
       case Direction.SOUTH_EAST:
       case Direction.NORTH_WEST:
-        return "\\";
-      case Direction.NORTH_EAST:
+        return Chars.ChainLinkLeft;
       case Direction.SOUTH_WEST:
-        return "/";
-      default:
-        return "+";
+      case Direction.NORTH_EAST:
+        return Chars.ChainLinkRight;
     }
   }
 
-  *grapple(direction: Direction.Direction): Effect {
+  use(direction: Direction.Direction) {
+    game.level.addEffect(this.lash(direction));
+    return true;
+  }
+
+  *lash(direction: Direction.Direction) {
+    // Chain modifiers should be able to hook into this flow to "do" certain things.
+    // - Probably makes sense to introduce a mini event system and have hooks for things
+    //   like cast, move, strike, and recoil.
+    // - Should modifiers also get some control over the rendering? E.g. blue tip for
+    //   knockback, green tip for poison, grapple tip for grapple?
+    // - Does it make sense for chain to have a fully separate system for upgrades?
+    //   Or could they just be done with ability specific vestiges?
+    //
+
+    let tip = Point.clone(this.owner.pos);
     let vec = directionToGridVector(direction);
     let inv = Vector.multiplied(vec, [-1, -1]);
-    const target = this.getTarget(direction);
-    let pullTarget = true;
-    let done = () => {};
+    let substance: Substance | undefined;
 
-    if (target) {
-      done = game.level.addFX(terminal => {
-        let pos = Point.translated(target.pos, inv);
-        terminal.putGlyph(pos.x, pos.y, this.glyph)
+    let done = game.level.addFX(terminal => {
+      // Draw chain links from the owner to the tip of the chain
+      let pos = Point.clone(this.owner.pos);
+      let char = this.getDirectionalChar(direction);
+      let alt = false;
 
-        while (!Point.equals(pos, this.owner.pos)) {
-          Point.translate(pos, inv);
-          let char = this.getDirectionalChar(direction);
-          terminal.put(pos.x, pos.y, char, Colors.Orange);
+      // TODO: Should get these points from a method then iterate them
+      while (!Point.equals(pos, tip)) {
+        Point.translate(pos, vec);
+        alt = !alt;
+        let fg = alt ? Colors.Grey3 : Colors.Grey2;
+        let bg: number | undefined;
+        if (substance) {
+          fg = substance.fg;
+          bg = substance.bg;
         }
-      });
+        terminal.put(pos.x, pos.y, char, fg, bg);
+      }
+    });
+
+    // Move the tip of the chain out until it hits something
+    // TODO: Probably cleaner to have a method which gets each point in
+    // the line, then we just iterate through that instead of managing vectors.
+    // And we can reverse the same line.
+    while (true) {
+      yield 0.3;
+      Point.translate(tip, vec);
+      let tile = game.level.getTile(tip.x, tip.y);
+      if (tile == null) break;
+      if (tile.substance) substance = tile.substance;
+      if (tile.type.flyable === false) break;
+      let entities = game.level.getEntitiesAt(tip.x, tip.y);
+
+      if (entities.length) {
+        for (let entity of entities) {
+          this.owner.attack(entity, this.getBaseDamage());
+          if (substance) {
+            substance.onEnter(entity);
+          }
+        }
+
+        break;
+      }
     }
 
-    // Impossible to pull tiles
-    if (target instanceof Tile && !target.type.walkable) pullTarget = false;
-
-    // Impossible to pull heavy enemies
-    if (target instanceof Entity && target.heavy) pullTarget = false;
-
-    // There was no target to hit
-    if (target === undefined) return;
-
-    if (pullTarget) {
-      assert(target instanceof Entity, "can only grapple entities");
-      console.log("pull target", pullTarget)
-
-      while (true) {
-        target.moveBy(inv[0], inv[1], { forced: true });
-
-        if (!target.didMove) {
-          target.addStatus(new Stunned(2));
-          break;
-        }
-
-        yield 1;
-      }
-    } else {
-      while (true) {
-        this.owner.moveBy(vec[0], vec[1], { forced: true });
-        if (!this.owner.didMove) break;
-        yield 1;
+    // Move the tip of the chain back to the player
+    while (true) {
+      Point.translate(tip, inv);
+      yield 0.5;
+      if (Point.equals(tip, this.owner.pos)) {
+        break;
       }
     }
 
     done();
+  }
+
+  getBaseDamage(): Damage {
+    return {
+      type: DamageType.Chain,
+      amount: 1,
+    };
   }
 }

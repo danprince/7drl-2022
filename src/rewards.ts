@@ -1,10 +1,113 @@
 import { RNG } from "silmarils";
 import { Colors, Chars, Glyph, Glyphs } from "./common";
 import { designLevel } from "./designer";
-import { DamageType, Vestige } from "./game";
+import { DamageType, Rarity, Vestige } from "./game";
 import { Terminal, TextAlign, fmt } from "./terminal";
 import { View } from "./ui";
 import * as Levels from "./levels";
+
+
+interface Reward {
+  price: number;
+  name: string;
+  description: string;
+  glyph: Glyph;
+  onPurchase(): void;
+}
+
+class VestigeReward implements Reward {
+  name: string;
+  glyph: Glyph;
+  description: string;
+  price: number;
+
+  constructor(private vestige: Vestige) {
+    this.name = vestige.name;
+    this.description = vestige.description;
+    this.glyph = vestige.glyph;
+    this.price = this.priceFromRarity(vestige.rarity);
+  }
+
+  private priceFromRarity(rarity: Rarity) {
+    switch (rarity) {
+      case Rarity.Rare: return RNG.int(20, 50);
+      case Rarity.Uncommon: return RNG.int(10, 20);
+      case Rarity.Common: return RNG.int(5, 10);
+    }
+  }
+
+  onPurchase(): void {
+    game.player.addVestige(this.vestige);
+  }
+}
+
+class HealthReward implements Reward {
+  name = "Replenish";
+  glyph = Glyphs.HP;
+  description = "Regain lost health";
+  price: number;
+
+  constructor(private amount: number) {
+    this.price = RNG.int(amount * 1, amount * 3);
+  }
+
+  onPurchase(): void {
+    game.player.applyDamage({
+      type: DamageType.Healing,
+      amount: -this.amount,
+    });
+  }
+}
+
+class PotionReward implements Reward {
+  name = "Cleanse";
+  glyph = Glyph(Chars.Potion, Colors.Turquoise);
+  description = "Remove all status effects";
+  price = RNG.int(0, 5);
+
+  onPurchase(): void {
+    for (let status of game.player.statuses) {
+      game.player.removeStatus(status);
+    }
+  }
+}
+
+class MoneyReward implements Reward {
+  glyph = Glyphs.Obsidian;
+  description = "";
+  price = 0;
+  get name(): string {
+    return `${this.amount}`;
+  }
+
+  constructor(private amount: number) {}
+
+  onPurchase(): void {
+    game.player.currency += this.amount;
+  }
+}
+
+function rollVestigeReward(rarity: Rarity) {
+  let rareVestiges =
+    game.vestigePool.filter(vestige => vestige.rarity === Rarity.Rare);
+  let uncommonVestiges =
+    game.vestigePool.filter(vestige => vestige.rarity === Rarity.Uncommon);
+  let commonVestiges =
+    game.vestigePool.filter(vestige => vestige.rarity === Rarity.Uncommon);
+
+  // Translate rare rolls into uncommon if the rare pool is empty.
+  if (rarity === Rarity.Rare && rareVestiges.length === 0) rarity = Rarity.Uncommon;
+  if (rarity === Rarity.Uncommon && uncommonVestiges.length === 0) rarity = Rarity.Common;
+
+  let vestigeRewardPool =
+    rarity === Rarity.Rare ? rareVestiges :
+    rarity === Rarity.Uncommon ? uncommonVestiges :
+    commonVestiges;
+
+  let vestige = RNG.element(vestigeRewardPool);
+  game.removeVestigeFromPool(vestige);
+  return new VestigeReward(vestige);
+}
 
 function rollNextReward(): Reward {
   let rolledForVestige = RNG.chance(0.5);
@@ -12,10 +115,12 @@ function rollNextReward(): Reward {
   let rolledUncommon = RNG.chance(0.15);
 
   if (rolledForVestige && game.vestigePool.length > 0) {
-    // TODO: Give vestiges rarities
-    RNG.shuffle(game.vestigePool);
-    let vestige = game.vestigePool.pop()!;
-    return new VestigeReward(vestige);
+    let rarity =
+      rolledRare ? Rarity.Rare :
+      rolledUncommon ? Rarity.Uncommon :
+      Rarity.Common;
+
+    return rollVestigeReward(rarity);
   }
 
   // Otherwise, we're going to get a standard reward
@@ -29,99 +134,21 @@ function rollNextReward(): Reward {
       rolledUncommon ? 2 :
       1;
 
-    return new HealthReward(amount, 3);
+    return new HealthReward(amount);
   }
 
   // If we currently have status effects, we can roll a potion
   if (canRollPotion && RNG.chance(0.5)) {
-    return new PotionReward(1);
+    return new PotionReward();
   }
 
   // Otherwise, fall back to just rolling money
-  let money =
+  let amount =
     rolledRare ? RNG.int(1, 30) : 
     rolledUncommon ? RNG.int(1, 20) : 
     RNG.int(1, 5);
 
-  return new MoneyReward(money);
-}
-
-interface Reward {
-  price: number;
-  name: string;
-  description: string;
-  glyph: Glyph;
-  locked: boolean;
-  keyRequired?: boolean;
-  onPurchase(): void;
-}
-
-class VestigeReward implements Reward {
-  price: number;
-  name: string;
-  glyph: Glyph;
-  description: string;
-  locked = false;
-
-  constructor(private vestige: Vestige) {
-    this.price = vestige.price;
-    this.name = vestige.name;
-    this.description = vestige.description;
-    this.glyph = vestige.glyph;
-  }
-
-  onPurchase(): void {
-    game.player.addVestige(this.vestige);
-  }
-}
-
-class HealthReward implements Reward {
-  name = "Replenish";
-  glyph = Glyphs.HP;
-  description = "Regain lost health";
-  locked = false;
-
-  constructor(private amount: number, public price: number) {
-  }
-
-  onPurchase(): void {
-    game.player.applyDamage({
-      type: DamageType.Healing,
-      amount: this.amount,
-    });
-  }
-}
-
-class PotionReward implements Reward {
-  name = "Cleanse";
-  glyph = Glyph(Chars.Potion, Colors.Turquoise);
-  description = "Remove all status effects";
-  locked = false;
-
-  constructor(public price: number) {}
-
-  onPurchase(): void {
-    for (let status of game.player.statuses) {
-      game.player.removeStatus(status);
-    }
-  }
-}
-
-class MoneyReward implements Reward {
-  glyph = Glyphs.Obsidian;
-  description = "";
-  locked = false;
-  price = 0;
-
-  get name(): string {
-    return `${this.amount}`;
-  }
-
-  constructor(private amount: number) {}
-
-  onPurchase(): void {
-    game.player.currency += this.amount;
-  }
+  return new MoneyReward(amount);
 }
 
 export class RewardsView extends View {
@@ -129,25 +156,19 @@ export class RewardsView extends View {
 
   constructor() {
     super();
-    let one = rollNextReward();
-    let two = rollNextReward();
-    let three = rollNextReward();
+    // The first reward is always guaranteed
+    this.rewards.push(rollNextReward());
 
-    let killedAllMonsters = game.level.hasKilledAllMonsters();
-    let foundGoldenKey = game.player.hasKey;
-
-    if (!foundGoldenKey) {
-      two.locked = true;
-    }
-    if (!killedAllMonsters) {
-      three.locked = true;
-    }
-
-    this.rewards = [one, two, three];
-
+    // Second reward is available if you found the key
     if (game.player.hasKey) {
+      this.rewards.push(rollNextReward());
       game.player.hasKey = false;
       game.log("The key vanishes")
+    }
+
+    // Final reward if you killed everything in the previous level
+    if (game.level.hasKilledAllMonsters()) {
+      this.rewards.push(rollNextReward());
     }
   }
 
@@ -164,8 +185,8 @@ export class RewardsView extends View {
     for (let y = 0; y < dialog.height; y++) {
       let even = y % 2 === 0;
       let fg = even ? Colors.Grey2 : Colors.Grey1;
-      dialog.put(-1, y, "\xa1", fg, Colors.Black);
-      dialog.put(dialog.width, y, "\xa1", fg, Colors.Black);
+      dialog.put(-1, y, Chars.ChainLinkVertical, fg, Colors.Black);
+      dialog.put(dialog.width, y, Chars.ChainLinkVertical, fg, Colors.Black);
     }
 
     let rewardListPanel = dialog.childWithPadding(1);
@@ -179,11 +200,8 @@ export class RewardsView extends View {
     let entrancePoint = game.level.exitPoint;
     let levelType = Levels.Caverns;
 
-    if (game.floor >= 10) {
-      levelType = Levels.Grasslands;
-    } else if (game.floor >= 6) {
-      levelType = Levels.Mantle;
-    } else if (game.floor >= 3) {
+    if (game.floor >= 3) {
+      // TODO: More levels
       levelType = Levels.Jungle;
     }
 
@@ -207,15 +225,14 @@ export class RewardsView extends View {
   renderReward(terminal: Terminal, reward: Reward) {
     let rewardFg = reward.glyph.fg;
     let rewardBg = reward.glyph.bg;
-    let nameColor = reward.locked ? Colors.Grey3 : Colors.White;
-    let glyphFg = reward.locked ? Colors.Grey3 : rewardFg;
-    let glyphBg = reward.locked ? Colors.Black : rewardBg;
+    let nameColor = Colors.White;
+    let glyphFg = rewardFg;
+    let glyphBg = rewardBg;
     let canAfford = reward.price <= game.player.currency;
     let hover = terminal.isPointerOver(-1, -1, terminal.width + 2, terminal.height + 2);
     let active = hover && terminal.isPointerDown();
 
     let frameColor =
-      reward.locked ? hover ? Colors.Grey2 : Colors.Grey1 :
       canAfford ? hover ? Colors.Grey3 : Colors.Grey2 :
       hover ? Colors.Red2 : Colors.Red1;
 
@@ -223,10 +240,6 @@ export class RewardsView extends View {
 
     if (hover) {
       this.selectedRewardIndex = this.rewards.indexOf(reward);
-    }
-
-    if (active && canAfford && !reward.locked) {
-      this.buyReward(reward);
     }
 
     let rewardName = fmt()
@@ -237,51 +250,42 @@ export class RewardsView extends View {
       .text(reward.name)
       .toString();
 
-    let buyText = reward.locked ? (
-      fmt()
-        .color(Colors.Grey1, Colors.Grey2)
-        .text("LOCKED")
-        .toString()
-    ) : reward.price > 0 ? (
-      fmt()
-        .color(Colors.Grey2)
-        .text(Chars.Obsidian)
-        .color(canAfford ? Colors.Green : Colors.Red)
-        .text(reward.price)
-        .toString()
-    ) : (
-      ""
-    );
+    let buyText = fmt()
+      .color(Colors.Grey2)
+      .text(Chars.Obsidian)
+      .color(canAfford ? Colors.Green : Colors.Red)
+      .text(reward.price)
+      .toString()
 
     terminal.write(terminal.width / 2, 0, rewardName, {
       textAlign: TextAlign.Center
     });
 
-    terminal.write(terminal.width / 2, 2, buyText, {
-      textAlign: TextAlign.Center
-    });
+    if (reward.price > 0) {
+      terminal.write(terminal.width / 2, 2, buyText, {
+        textAlign: TextAlign.Center
+      });
+    }
 
-    if (hover && !reward.locked && reward.description) {
+    if (hover && reward.description) {
       this.ui.popup(terminal, {
-        x: 2,
-        y: terminal.width / 2 + 4,
+        x: terminal.width / 2,
+        y: 4,
         text: reward.description,
         justify: "center",
-        maxWidth: terminal.width,
         frameColor: rewardFg,
       });
     }
 
+    if (active && canAfford) {
+      this.buyReward(reward);
+    }
   }
 
   buyReward(reward: Reward) {
-    if (reward.keyRequired && !game.player.hasKey) return;
     if (game.player.currency < reward.price) return;
-
     game.player.currency -= reward.price;
-    if (reward.keyRequired) game.player.hasKey = false;
     this.rewards.splice(this.rewards.indexOf(reward), 1);
-
     reward.onPurchase();
 
     if (this.rewards.length === 0) {

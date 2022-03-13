@@ -1,11 +1,11 @@
 import { Array2D, Direction, Point, PRNG } from "silmarils";
+import { Colors } from "./common";
 import { Digger, Marker } from "./digger";
-import { Level, LevelType, Entity, Tile } from "./game";
+import { Level, LevelType, Entity, Tile, Decoration } from "./game";
 import { assert, DijkstraMap, directionToGridVector, maxBy } from "./helpers";
+import { debugBigDigit, debugDot, debugDigit, debugPercent, Terminal } from "./terminal";
 import * as Tiles from "./tiles";
 import * as Entities from "./entities";
-
-import { debugBigDigit, debugDot, debugDigit, debugPercent, Terminal } from "./terminal";
 
 export let debuggingRenderer = (terminal: Terminal) => {};
 
@@ -13,6 +13,7 @@ const DEFAULT_LEVEL_WIDTH = 21;
 const DEFAULT_LEVEL_HEIGHT = 21;
 const DESIGNERS_PER_LEVEL = 10;
 const MAX_DIG_ATTEMPTS = 10;
+const MAX_DECORATE_ATTEMPTS = 50;
 const UNCOMMON_CHANCE = 0.15;
 const RARE_CHANCE = 0.05;
 
@@ -244,6 +245,21 @@ export class LevelDesigner {
     for (let reward of rewards) {
       this.setEntity(reward, reward.pos);
     }
+
+    // Turn some of the walls into treasure
+    for (let point of this.points()) {
+      let tile = this.getTile(point);
+      if (tile?.type === this.levelType.characteristics.defaultWallTile) {
+        if (PRNG.chance(this.rng, 0.05)) {
+          tile.glyph.fg = Colors.Orange; 
+          tile.onTileDig = (event) => {
+            if (event.entity === game.player) {
+              game.player.addCurrency(10);
+            }
+          };
+        }
+      }
+    }
   }
 
   generateReward() {
@@ -286,10 +302,70 @@ export class LevelDesigner {
 
   addEnvironment() {
     // TODO: Add pools and rivers
+    for (let point of this.accessiblePoints()) {
+      if (this.isFinalised(point)) continue;
+      if (PRNG.chance(this.rng, 0.05)) {
+        let tile = new Tile(Tiles.Fissure);
+        this.setTile(point, tile);
+      }
+    }
   }
 
   addDecorations() {
+    let points = PRNG.shuffled(this.rng, this.points());
+    let decorations = PRNG.shuffled(this.rng, this.levelType.characteristics.decorations);
+    if (decorations.length === 0) return;
 
+    for (let i = 0; i < MAX_DECORATE_ATTEMPTS; i++) {
+      let point = points.pop()!;
+      let decoration = decorations.pop()!;
+      if (!this.isFinalised(point))
+        this.tryToPlaceDecoration(point, decoration);
+      decorations.unshift(decoration);
+    }
+  }
+
+  tryToPlaceDecoration(point: Point.Point, decoration: Decoration): boolean {
+    let [src, dst] = decoration(this.levelType.characteristics);
+
+    // Check each tile in the 3x3
+    for (let y = 0; y < 3; y++) {
+      for (let x = 0; x < 3; x++) {
+        let i = x + y * 3;
+        let srcTileType = src[i];
+        let dstTileType = dst[i];
+
+        // If neither tile is defined in the decoration, it will always match
+        if (srcTileType === undefined && dstTileType === undefined) continue;
+
+        let tile = this.getTile({ x: point.x + x, y: point.y + y });
+
+        if (tile == null && srcTileType !== undefined) {
+          return false;
+        }
+
+        // There's a tile that matches
+        if (tile && tile.type !== srcTileType) {
+          return false;
+        }
+      }
+    }
+
+    // If we got here without returning false already, then it means the
+    // decoration matched and we can place it safely.
+
+    for (let y = 0; y < 3; y++) {
+      for (let x = 0; x < 3; x++) {
+        let i = x + y * 3;
+        let dstTileType = dst[i];
+        if (dstTileType) {
+          let tile = new Tile(dstTileType);
+          this.setTile({ x: point.x + x, y: point.y + y }, tile);
+        }
+      }
+    }
+
+    return true;
   }
 
   addTraps() {
@@ -388,12 +464,14 @@ export class LevelDesigner {
     let entranceTile = new Tile(Tiles.Downstairs);
     let exitTile = new Tile(Tiles.Upstairs);
 
-    entranceTile.onEnter = entity => {
-      game.log("No going back");
+    entranceTile.onTileBump = event => {
+      if (event.entity === game.player) {
+        game.log("No going back");
+      }
     };
 
-    exitTile.onEnter = entity => {
-      if (entity === game.player) {
+    exitTile.onTileBump = event => {
+      if (event.entity === game.player) {
         level.exit();
       }
     };
@@ -582,6 +660,9 @@ export class LevelDesigner {
 
     // If the cell is already finalised, we never want to spawn there
     if (this.isFinalised(point)) return -999;
+
+    // Ramp up the chance to spawn as we ascend
+    score += (game.floor + 1) * 0.005;
 
     // If we're close to the entrance, it's much less likely we'll spawn
     if (metrics.distanceFromEntrance < 5) score -= 0.05;

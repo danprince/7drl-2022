@@ -1,6 +1,7 @@
-import { Glyph, Chars } from "./common";
+import { Glyph, Chars, Glyphs } from "./common";
 import { DeathEvent, EnterLevelEvent, EventHandler, GainCurrencyEvent, StatusAddedEvent, TakeDamageEvent } from "./events";
 import { Colors } from "./common";
+import { fmt } from "./terminal";
 
 export class MessageLogHandler extends EventHandler {
   onTakeDamage(event: TakeDamageEvent): void {
@@ -12,8 +13,13 @@ export class MessageLogHandler extends EventHandler {
 
     let healed = damage.amount < 0;
     let color = healed ? Colors.Green : Colors.Red;
-    let verb = healed ? "gains" : "loses";
-    let amount = `{${color}}${Math.abs(damage.amount)}{/}`;
+    let verb = healed ? "gains" : "takes";
+
+    let amount = fmt()
+      .glyph(Glyphs.HP)
+      .color(color)
+      .text(Math.abs(damage.amount))
+      .toString();
 
     if (dealer) {
       game.log(dealer, "hit", entity, "with", damage.type, "for", amount);

@@ -1,6 +1,6 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
 import { Glyph, Chars } from "./common";
-import { DealDamageEvent, DeathEvent, DespawnEvent, EnterLevelEvent, EventHandler, ExitLevelEvent, GainCurrencyEvent, GameEvent, InteractEvent, KillEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, VestigeAddedEvent } from "./events";
+import { DealDamageEvent, DeathEvent, DespawnEvent, EnterLevelEvent, EventHandler, ExitLevelEvent, GainCurrencyEvent, GameEvent, InteractEvent, KillEvent, MoveEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, TileExitEvent, VestigeAddedEvent } from "./events";
 import { Constructor, DijkstraMap, directionToGridVector, OneOrMore } from "./helpers";
 import { Terminal } from "./terminal";
 import { Colors } from "./common";
@@ -8,9 +8,16 @@ import { Digger } from "./digger";
 import { MessageLogHandler } from "./handlers";
 
 const ENERGY_REQUIRED_PER_TURN = 12;
+const PARALLEL_EFFECTS = true;
 
 export type GameMessageComponent = string | number | Glyph | Entity | DamageType | Status | Tile;
 export type GameMessage = GameMessageComponent[];
+
+export enum Rarity {
+  Common,
+  Uncommon,
+  Rare,
+}
 
 interface MovementOptions {
   forced: boolean;
@@ -33,6 +40,10 @@ export class Game extends EventHandler {
 
   addVestigeToPool(vestige: Vestige) {
     this.vestigePool.push(vestige);
+  }
+
+  removeVestigeFromPool(vestige: Vestige) {
+    this.vestigePool.splice(this.vestigePool.indexOf(vestige), 1);
   }
 
   onEvent(event: GameEvent): void {
@@ -73,14 +84,33 @@ export class Game extends EventHandler {
         yield 0;
       }
 
-      await entity.update();
+      while (true) {
+        let result = await entity.update();
 
-      while (this.level.effects.length) {
-        let effects = this.level.effects;
-        this.level.effects = [];
+        if (entity === game.player && result === false) {
+          yield 0;
+        } else {
+          break
+        }
+      }
 
-        for (let effect of effects) {
-          yield* effect;
+      if (PARALLEL_EFFECTS) {
+        while (this.level.effects.length) {
+          let effect = this.level.effects.shift()!;
+          let result = effect.next();
+          if (!result.done) this.level.effects.push(effect);
+          if (result.value != null) yield result.value;
+        }
+      } else {
+        while (this.level.effects.length) {
+          let effects = this.level.effects;
+          this.level.effects = [];
+
+          for (let effect of effects) {
+            for (let frame of effect) {
+              yield frame;
+            }
+          }
         }
       }
     }
@@ -101,6 +131,11 @@ export type Effect = Generator<number, void>;
 
 export type FX = (terminal: Terminal) => void;
 
+export type Decoration = (characteristics: LevelCharacteristics) => [
+  src: Array<TileType | undefined>,
+  dst: Array<TileType | undefined>
+];
+
 export interface LevelCharacteristics {
   defaultFloorTile: TileType;
   defaultWallTile: TileType;
@@ -109,6 +144,7 @@ export interface LevelCharacteristics {
   commonMonsterTypes: OneOrMore<Constructor<Entity>>;
   uncommonMonsterTypes: OneOrMore<Constructor<Entity>>;
   rareMonsterTypes: OneOrMore<Constructor<Entity>>;
+  decorations: Decoration[];
   baseMonsterSpawnChance: number;
   maxRewards: number;
 }
@@ -210,7 +246,6 @@ export class Level extends EventHandler {
   }
 
   removeEntity(entity: Entity) {
-    console.log(this.entities.indexOf(entity))
     this.entities.splice(this.entities.indexOf(entity), 1);
   }
 
@@ -218,6 +253,10 @@ export class Level extends EventHandler {
     return this.entities.filter(entity => {
       return entity.pos.x === x && entity.pos.y === y;
     });
+  }
+
+  getEntitiesAtPoint(point: Point.Point) {
+    return this.getEntitiesAt(point.x, point.y);
   }
 
   getEntitiesInRect(rect: Rectangle.Rectangle): Entity[] {
@@ -395,7 +434,7 @@ export class TileType extends EventHandler {
   }
 }
 
-export class Tile {
+export class Tile extends EventHandler {
   level: Level = null!;
   pos: Point.Point = { x: 0, y: 0};
   type: TileType;
@@ -403,6 +442,7 @@ export class Tile {
   substance: Substance | undefined;
 
   constructor(type: TileType) {
+    super();
     this.type = type;
     this.glyph = type.assignGlyph();
     this.type.onCreate(this);
@@ -415,11 +455,8 @@ export class Tile {
       .filter(tile => tile != null) as Tile[];
   }
 
-  onEnter(entity: Entity) {
+  enter(entity: Entity) {
     this.substance?.onEnter(entity);
-  }
-
-  onBump(entity: Entity) {
   }
 
   update() {
@@ -482,6 +519,12 @@ export class DamageType {
     ""
   );
 
+  static Chain = new DamageType(
+    Glyph(Chars.ChainLinkHorizontal, Colors.Grey3),
+    "Chain",
+    ""
+  );
+
   static Healing = new DamageType(
     Glyph(Chars.Heart, Colors.Red),
     "Healing",
@@ -538,7 +581,7 @@ export function isDamageType(value: any): value is DamageType {
 export interface Damage {
   amount: number;
   type: DamageType;
-  direction?: Vector.Vector;
+  vector?: Vector.Vector;
   knockback?: boolean;
   statuses?: Status[];
   dealer?: Entity;
@@ -698,9 +741,8 @@ export abstract class Entity extends EventHandler {
       }
     }
 
-    if (damage.direction && damage.knockback && !this.heavy) {
-      let [dx, dy] = damage.direction;
-      this.moveBy(dx, dy, { forced: true });
+    if (damage.vector && damage.knockback && !this.heavy) {
+      this.moveBy(damage.vector, { forced: true });
     }
 
     this.hp.current = Math.max(this.hp.current - damage.amount, 0);
@@ -742,15 +784,11 @@ export abstract class Entity extends EventHandler {
   }
 
   resetEnergy() {
-    this.energy = 0;
+    this.energy -= ENERGY_REQUIRED_PER_TURN;
   }
 
   takeTurn(): UpdateResult {
     return true;
-  }
-
-  tryTakeTurn(): UpdateResult {
-    return this.takeTurn();
   }
 
   async update() {
@@ -762,7 +800,7 @@ export abstract class Entity extends EventHandler {
 
     if (this.canTakeTurn()) {
       this.resetEnergy();
-      result = await this.tryTakeTurn();
+      result = await this.takeTurn();
     }
 
     return result;
@@ -778,35 +816,35 @@ export abstract class Entity extends EventHandler {
     }
   }
 
-  moveBy(x: number, y: number, options = defaultMovementOptions) {
-    return this.moveTo(this.pos.x + x, this.pos.y + y, options);
+  moveBy(vec: Vector.Vector, options = defaultMovementOptions) {
+    return this.moveTo(this.pos.x + vec[0], this.pos.y + vec[1], options);
   }
 
   moveIn(direction: Direction.Direction, options = defaultMovementOptions) {
-    let [dx, dy] = directionToGridVector(direction);
-    return this.moveBy(dx, dy, options);
+    let vec = directionToGridVector(direction);
+    return this.moveBy(vec, options);
   }
 
   moveTowards(target: Entity, options = defaultMovementOptions) {
     let dx = target.pos.x - this.pos.x;
     let dy = target.pos.y - this.pos.y;
     return Math.abs(dx) > Math.abs(dy)
-      ? this.moveBy(Math.sign(dx), 0, options)
-      : this.moveBy(0, Math.sign(dy), options);
+      ? this.moveBy([Math.sign(dx), 0], options)
+      : this.moveBy([0, Math.sign(dy)], options);
   }
 
   moveAway(target: Entity, options = defaultMovementOptions) {
     let dx = this.pos.x - target.pos.x;
     let dy = this.pos.x - target.pos.y;
     return Math.abs(dx) > Math.abs(dy)
-      ? this.moveBy(Math.sign(dx), 0, options)
-      : this.moveBy(0, Math.sign(dy), options);
+      ? this.moveBy([Math.sign(dx), 0], options)
+      : this.moveBy([0, Math.sign(dy)], options);
   }
 
   moveTowardsWithDiagonals(target: Entity, options = defaultMovementOptions) {
     let dx = target.pos.x - this.pos.x;
     let dy = target.pos.y - this.pos.y;
-    return this.moveBy(Math.sign(dx), Math.sign(dy), options);
+    return this.moveBy([Math.sign(dx), Math.sign(dy)], options);
   }
 
   moveTo(x: number, y: number, options = defaultMovementOptions) {
@@ -830,10 +868,9 @@ export abstract class Entity extends EventHandler {
 
     // Can't walk into solid tiles
     if (!tile.type.walkable && !tile.type.liquid) {
-      new TileBumpEvent(this, tile).dispatch();
-      tile.onBump(this);
+      let event = new TileBumpEvent(this, tile).dispatch();
       this.didMove = false;
-      return false;
+      return event.succeeded;
     }
 
     // Attempt to melee any entities stood here
@@ -856,7 +893,7 @@ export abstract class Entity extends EventHandler {
 
         let vec = Vector.fromPoints(this.pos, { x, y });
         Vector.normalize(vec);
-        damage.direction = vec.map(Math.round) as Vector.Vector;
+        damage.vector = vec.map(Math.round) as Vector.Vector;
 
         this.attack(entity, damage);
       }
@@ -865,11 +902,17 @@ export abstract class Entity extends EventHandler {
       return true;
     }
 
+    let fromPoint = Point.clone(this.pos);
+    let toPoint = Point.from(x, y);
+    let previousTile = this.getTile()!;
+
+    new TileExitEvent(this, previousTile).dispatch();
+    new MoveEvent(this, fromPoint, toPoint).dispatch();
+    new TileEnterEvent(this, tile).dispatch();
+    tile.enter(this);
+
     this.pos.x = x;
     this.pos.y = y;
-
-    tile.onEnter(this);
-    new TileEnterEvent(this, tile).dispatch();
     this.didMove = true;
 
     return true
@@ -965,13 +1008,6 @@ export class Player extends Entity {
     return super.update();
   }
 
-  async tryTakeTurn() {
-    while (true) {
-      let result = await this.takeTurn();
-      if (result) return result;
-    }
-  }
-
   setNextAction(action: PlayerAction): void {}
 
   private waitForNextAction() {
@@ -985,7 +1021,7 @@ export class Player extends Entity {
 
     switch (action.type) {
       case "move":
-        return this.moveBy(action.x, action.y);
+        return this.moveBy([action.x, action.y]);
       case "rest":
         return true;
       case "use":
@@ -1076,7 +1112,7 @@ export abstract class Vestige extends EventHandler {
   abstract name: string;
   abstract description: string;
   abstract glyph: Glyph;
-  abstract price: number;
+  abstract rarity: Rarity;
 
   onAdded() {}
   onRemoved() {}

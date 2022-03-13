@@ -1,3 +1,5 @@
+import { Direction } from "silmarils";
+
 export interface Glyph {
   char: string;
   fg: number;
@@ -99,6 +101,10 @@ export const Chars = {
   Time: "\x1d",
   Snowflake: "\x1e",
   Obsidian: "\x1f",
+  ChainLinkHorizontal: "\xb0",
+  ChainLinkVertical: "\xb1",
+  ChainLinkRight: "\xb2",
+  ChainLinkLeft: "\xb3",
 
   // Entities
   Creature: "\x80",
@@ -122,7 +128,7 @@ export const Chars = {
   Slime: "\x92",
   Skeleton: "\x93",
   Chicken: "\x94",
-  Mimic: "\x95",
+  Mimic: "\xa9",
 
   // Props
   Egg: "\x96",
@@ -184,4 +190,22 @@ export const Glyphs = {
   HP: Glyph(Chars.Heart, Colors.Red),
   Obsidian: Glyph(Chars.Obsidian, Colors.Grey2),
   Turns: Glyph(Chars.Time, Colors.Blue),
+  Molten: Glyph(Chars.Diamond, Colors.Orange),
 };
+
+export const DIRECTION_CHARS: {
+  [K in Direction.Direction]: string
+} = {
+  [Direction.NORTH]: Chars.North,
+  [Direction.SOUTH]: Chars.South,
+  [Direction.WEST]: Chars.West,
+  [Direction.EAST]: Chars.East,
+  [Direction.NORTH_EAST]: Chars.NorthEast,
+  [Direction.SOUTH_EAST]: Chars.SouthEast,
+  [Direction.NORTH_WEST]: Chars.NorthWest,
+  [Direction.SOUTH_WEST]: Chars.SouthWest,
+};
+
+export function getDirectionChar(direction: Direction.Direction): string {
+  return DIRECTION_CHARS[direction];
+}

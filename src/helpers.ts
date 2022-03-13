@@ -1,5 +1,5 @@
 import { Array2D, Direction, Point, Vector } from "silmarils";
-import { Glyph, Chars } from "./common";
+import { Glyph } from "./common";
 
 export type Constructor<T> = { new(...args: any[]): T };
 export type OneOrMore<T> = [item: T, ...items: T[]];
@@ -39,23 +39,6 @@ export function delayAnimationFrame(delay: number = 0) {
     }
     requestAnimationFrame(poll);
   });
-}
-
-export const DIRECTION_CHARS: {
-  [K in Direction.Direction]: string
-} = {
-  [Direction.NORTH]: Chars.North,
-  [Direction.SOUTH]: Chars.South,
-  [Direction.WEST]: Chars.West,
-  [Direction.EAST]: Chars.East,
-  [Direction.NORTH_EAST]: Chars.NorthEast,
-  [Direction.SOUTH_EAST]: Chars.SouthEast,
-  [Direction.NORTH_WEST]: Chars.NorthWest,
-  [Direction.SOUTH_WEST]: Chars.SouthWest,
-};
-
-export function getDirectionChar(direction: Direction.Direction): string {
-  return DIRECTION_CHARS[direction];
 }
 
 export function directionToGridVector(direction: Direction.Direction) {

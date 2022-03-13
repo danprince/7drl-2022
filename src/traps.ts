@@ -66,7 +66,7 @@ export class ArrowTrap extends DirectionalTriggerTrap<Direction.CardinalDirectio
   description = "";
   glyph = Glyph("\xac", Colors.Grey4);
   directions = Direction.CARDINAL_DIRECTIONS;
-  detectionRange = 5;
+  detectionRange = 3;
 
   getArrowGlyph(direction: Direction.CardinalDirection): Glyph {
     switch (direction) {

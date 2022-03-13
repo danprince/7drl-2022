@@ -42,7 +42,8 @@ async function start() {
   let level = designLevel(Levels.Caverns, { x: 10, y: 2 });
 
   let player = new Player();
-  player.setAbility(new Abilities.Grapple());
+  player.setAbility(new Abilities.Chain());
+  player.addVestige(new Vestiges.Bores());
   game.setPlayer(player);
   game.setLevel(level);
 

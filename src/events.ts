@@ -1,5 +1,6 @@
+import { Direction, Point } from "silmarils";
 import { Damage, Entity, Level, Status, Tile, Vestige } from "./game";
-import { Constructor } from "./helpers";
+import { Constructor, getDirectionBetween } from "./helpers";
 
 export abstract class GameEvent {
   protected abstract invoke(handler: EventHandler): void;
@@ -20,6 +21,7 @@ export class EventHandler {
   onTileEnter(event: TileEnterEvent) {};
   onTileExit(event: TileExitEvent) {};
   onTileBump(event: TileBumpEvent) {}
+  onTileDig(event: TileDigEvent) {}
   onDealDamage(event: DealDamageEvent) {}
   onTakeDamage(event: TakeDamageEvent) {}
   onSpawn(event: SpawnEvent) {}
@@ -27,6 +29,7 @@ export class EventHandler {
   onDeath(event: DeathEvent) {}
   onKill(event: KillEvent) {}
   onPush(event: PushEvent) {}
+  onMove(event: MoveEvent) {}
   onInteract(event: InteractEvent) {}
   onStatusAdded(event: StatusAddedEvent) {}
   onStatusRemoved(event: StatusRemovedEvent) {}
@@ -66,6 +69,29 @@ export class ExitLevelEvent extends GameEvent {
   }
 }
 
+export class MoveEvent extends GameEvent {
+  constructor(
+    readonly entity: Entity,
+    readonly startPoint: Point.Point,
+    readonly endPoint: Point.Point
+  ) {
+    super();
+  }
+
+  get direction(): Direction.Direction {
+    return getDirectionBetween(this.startPoint, this.endPoint);
+  }
+
+  invoke(handler: EventHandler) {
+    return handler.onMove(this);
+  }
+
+  dispatch() {
+    this.sendTo(this.entity);
+    this.sendTo(game);
+  }
+}
+
 export class TileEnterEvent extends GameEvent {
   constructor(readonly entity: Entity, readonly tile: Tile) {
     super();
@@ -77,6 +103,7 @@ export class TileEnterEvent extends GameEvent {
 
   dispatch() {
     this.sendTo(this.entity);
+    this.sendTo(this.tile);
     this.sendTo(this.tile.type);
     this.sendTo(game);
   }
@@ -94,11 +121,14 @@ export class TileExitEvent extends GameEvent {
   dispatch() {
     this.sendTo(this.entity);
     this.sendTo(this.tile.type);
+    this.sendTo(this.tile);
     this.sendTo(game);
   }
 }
 
 export class TileBumpEvent extends GameEvent {
+  succeeded = false;
+
   constructor(readonly entity: Entity, readonly tile: Tile) {
     super();
   }
@@ -110,6 +140,25 @@ export class TileBumpEvent extends GameEvent {
   dispatch() {
     this.sendTo(this.entity);
     this.sendTo(this.tile.type);
+    this.sendTo(this.tile);
+    this.sendTo(game);
+    return this;
+  }
+}
+
+export class TileDigEvent extends GameEvent {
+  constructor(readonly entity: Entity, readonly tile: Tile) {
+    super();
+  }
+
+  invoke(handler: EventHandler) {
+    return handler.onTileDig(this);
+  }
+
+  dispatch() {
+    this.sendTo(this.entity);
+    this.sendTo(this.tile.type);
+    this.sendTo(this.tile);
     this.sendTo(game);
   }
 }

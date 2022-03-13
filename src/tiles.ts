@@ -90,12 +90,10 @@ export let Doorway = new TileType({
 });
 
 export let Upstairs = new TileType({
-  walkable: true,
   glyph: Glyph(Chars.Upstairs, Colors.Blue),
 });
 
 export let Downstairs = new TileType({
-  walkable: true,
   glyph: Glyph(Chars.Downstairs, Colors.Grey3),
 });
 
@@ -155,5 +153,58 @@ export let Water = new TileType({
   onTileEnter({ entity, tile }) {
     game.log(entity, "drowns in", tile, "the");
     entity.die();
+  },
+});
+
+export let SpikedFloor = new TileType({
+  glyph: {
+    char: ["'"],
+    fg: [Colors.Grey3],
+  },
+});
+
+export let SepulchreTorchHolder = new TileType({
+  glyph: {
+    char: ["'"],
+    fg: [Colors.Grey3],
+  },
+});
+
+export let SepulchreLamp = new TileType({
+  glyph: {
+    char: ["I"],
+    fg: [Colors.Grey3],
+  },
+});
+
+export let SepulchreLampLight = new TileType({
+  glyph: {
+    char: [Chars.Skull],
+    fg: [Colors.Green],
+  },
+});
+
+export let SepulchreTorchFlame = new TileType({
+  glyph: {
+    char: [Chars.Fire],
+    fg: [Colors.Green],
+  },
+});
+
+export let SepulchreWall = new TileType({
+  diggable: true,
+  autotiling: Chars.BrickWalls,
+  glyph: {
+    char: Chars.BrickWalls,
+    fg: [Colors.Turquoise1, Colors.Turquoise2],
+  },
+});
+
+export let SepulchreFloor = new TileType({
+  walkable: true,
+  flyable: true,
+  glyph: {
+    char: [...Chars.Cobbles, " "],
+    fg: [Colors.Blue1],
   },
 });

@@ -1,19 +1,19 @@
 import { Circle, Point, Raster } from "silmarils";
+import { Glyph } from "./common";
 import { Damage, Effect, Entity } from "./game";
-import { Glyph } from "./terminal";
 
 export function* Explosion({
   pos,
   size,
   attacker,
-  glyph,
+  getGlyph,
   getDamage,
   canTarget,
 }: {
   pos: Point.Point,
   size: number,
   attacker: Entity | undefined,
-  glyph: Glyph,
+  getGlyph: () => Glyph,
   getDamage: () => Damage,
   canTarget?: (entity: Entity) => boolean,
 }): Effect {
@@ -23,6 +23,7 @@ export function* Explosion({
     let circle = Circle.from(pos.x, pos.y, radius);
 
     for (let point of Raster.fillCircle(circle)) {
+      let glyph = getGlyph();
       terminal.putGlyph(point.x, point.y, glyph);
     }
   });
