@@ -44,7 +44,6 @@ async function start() {
 
   let player = new Player();
   player.setAbility(new Abilities.Chain());
-  player.addVestige(new Vestiges.Bores());
   game.setPlayer(player);
   game.setLevel(level);
 
