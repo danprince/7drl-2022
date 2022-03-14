@@ -387,4 +387,27 @@ function rules(born: number[], survive: number[]): CellularAutomataRules {
 export const CellularAutomataRules = {
   Caves: rules([5, 6, 7, 8], [4, 5, 6, 7, 8]),
   Smoothing: rules([8], [2, 3, 4, 5, 6, 7, 8]),
+  ChaoticCaverns: rules([0,1,2,3,4,6,7,8], [0,1,3,8]),
+  ChaoticCaverns2: rules([0,2,4,7,8],[0,1,2,3,4,6,7,8]),
 };
+
+export function diggerToCanvas(digger: Digger): HTMLCanvasElement {
+  let canvas = document.createElement("canvas");
+  let ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingEnabled = false;
+  canvas.style.imageRendering = "pixelated";
+  canvas.width = digger.width;
+  canvas.height = digger.height;
+  canvas.style.background = "white";
+
+  for (let y = 0; y < digger.height; y++) {
+    for (let x = 0; x < digger.width; x++) {
+      let marker = digger.get(x, y);
+      if (marker === Marker.Wall) {
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+
+  return canvas;
+}
