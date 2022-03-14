@@ -71,6 +71,13 @@ export const cavernous: TerrainDigger = (digger) => {
   digger.addPerimeterWall();
 };
 
+export const chaoticCaverns: TerrainDigger = (digger) => {
+  digger.noise(0.5);
+  digger.cellularAutomata({ rules: CellularAutomataRules.ChaoticCaverns2 });
+  //digger.cellularAutomata({ rules: CellularAutomataRules.Smoothing });
+  digger.addPerimeterWall();
+};
+
 export const volcanic: TerrainDigger = (digger, entrance) => {
   // Generate some closed caves
   digger.noise(0.5);
