@@ -1012,18 +1012,17 @@ export abstract class Ability extends EventHandler {
   abstract name: string;
   abstract description: string;
   abstract glyph: Glyph;
-  abstract targeting: TargetingMode;
+  abstract targetingMode: TargetingMode;
 
   onUpdate(entity: Entity) {}
   canUse(): boolean { return true; }
   use(target?: Entity | Direction.Direction): boolean { return true; }
 }
 
-export enum TargetingMode {
-  Directional = "directional",
-  Entity = "entity",
-  None = "none",
-}
+export type TargetingMode =
+  | { type: "directional", range: number }
+  | { type: "entity" }
+  | { type: "none" }
 
 export abstract class Vestige extends EventHandler {
   owner: Player = undefined!;

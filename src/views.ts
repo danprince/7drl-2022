@@ -121,16 +121,22 @@ export class GameView extends View {
       return;
     }
 
-    switch (ability.targeting) {
+    switch (ability.targetingMode.type) {
       case "none":
         game.player.setNextAction({ type: "use", target: undefined });
         break;
       case "directional":
-        this.ui.open(new DirectionTargetingView(this.viewport, target => {
-          game.player.setNextAction({ type: "use", target });
-        }));
+        this.useDirectionalAbility(ability.targetingMode.range, direction => {
+          game.player.setNextAction({ type: "use", target: direction });
+        });
         break;
     }
+  }
+
+  useDirectionalAbility(range: number, callback: (direction: Direction.Direction) => void) {
+    this.ui.open(
+      new DirectionTargetingView(this.viewport, range, callback)
+    );
   }
 }
 
@@ -230,6 +236,7 @@ export class DirectionTargetingView extends View {
 
   constructor(
     private viewport: ViewportPanel,
+    private range: number,
     private callback: (direction: Direction.Direction) => void
   ) {
     super();
@@ -255,7 +262,7 @@ export class DirectionTargetingView extends View {
     let blocked = false;
 
     // Render projectile path
-    while (true) {
+    for (let i = 0; i < this.range; i++) {
       Point.translate(pos, vec);
       let inside = game.level.isInBounds(pos.x, pos.y);
       if (!inside) break;

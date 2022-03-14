@@ -8,8 +8,15 @@ import { Explosion } from "./effects";
 export class Chain extends Ability {
   name = "Chain";
   glyph = Glyph(Chars.ChainLinkHorizontal, Colors.Grey3);
-  targeting = TargetingMode.Directional;
   description = "";
+  links: number = 3;
+
+  get targetingMode(): TargetingMode {
+    return {
+      type: "directional",
+      range: this.links,
+    };
+  }
 
   getDirectionalChar(direction: Direction.Direction) {
     switch (direction) {
@@ -71,8 +78,9 @@ export class Chain extends Ability {
     // TODO: Probably cleaner to have a method which gets each point in
     // the line, then we just iterate through that instead of managing vectors.
     // And we can reverse the same line.
-    while (true) {
+    for (let i = 0; i < this.links; i++) {
       Point.translate(tip, vec);
+      yield 1;
       let tile = game.level.getTile(tip.x, tip.y);
       if (tile == null) break;
       if (tile.substance) substance = tile.substance;
@@ -97,14 +105,15 @@ export class Chain extends Ability {
     yield 2;
 
     // Create an explosion
-    game.level.addEffect(Explosion({
-      pos: Point.clone(tip),
-      size: 1,
-      canTarget: () => true,
-      getGlyph: () => Glyph("*", Colors.Grey2),
-      getDamage: () => ({ type: DamageType.Explosion, amount: 1 }),
-      attacker: this.owner,
-    }));
+    // TODO: Reintroduce this after adding particle effects
+    //game.level.addEffect(Explosion({
+    //  pos: Point.clone(tip),
+    //  size: 1,
+    //  canTarget: () => true,
+    //  getGlyph: () => Glyph("*", Colors.Grey2),
+    //  getDamage: () => ({ type: DamageType.Explosion, amount: 1 }),
+    //  attacker: this.owner,
+    //}));
 
     // Move the tip of the chain back to the player
     while (true) {
