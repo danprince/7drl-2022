@@ -100,7 +100,7 @@ export let Downstairs = new TileType({
 export let Fissure = new TileType({
   walkable: true,
   flyable: true,
-  glyph: Glyph("+", Colors.Grey2),
+  glyph: Glyph(Chars.Dot, Colors.Grey2),
   onCreate(tile) {
     tile.setSubstance(new Substances.Magma(Infinity));
   },
