@@ -5,7 +5,8 @@ import { DamageType, Rarity, Vestige } from "./engine";
 import { Terminal, TextAlign, fmt } from "./terminal";
 import { View } from "./ui";
 import * as Levels from "./levels";
-
+import { Chain } from "./abilities";
+import { assert } from "./helpers";
 
 interface Reward {
   price: number;
@@ -56,6 +57,22 @@ class HealthReward implements Reward {
       type: DamageType.Healing,
       amount: -this.amount,
     });
+  }
+}
+
+class ChainLinkReward implements Reward {
+  name = "Link";
+  glyph = Glyphs.Chain;
+  description = "Add a link to your chain";
+  price: number;
+
+  constructor() {
+    this.price = RNG.int(1, 5);
+  }
+
+  onPurchase(): void {
+    assert(game.player.ability instanceof Chain, "chain required");
+    game.player.ability.addLinks(1);
   }
 }
 
@@ -133,8 +150,14 @@ function rollNextReward(): Reward {
   }
 
   // Otherwise, we're going to get a standard reward
+  let canRollChainLink = true;
   let canRollHP = game.player.hp.current < game.player.hp.max;
   let canRollPotion = game.player.statuses.length > 0;
+
+  // Chance to earn a new link for your chain
+  if (canRollChainLink && RNG.chance(0.5)) {
+    return new ChainLinkReward();
+  }
 
   // If we are currently missing HP, we can roll a health reward
   if (canRollHP && RNG.chance(0.5)) {

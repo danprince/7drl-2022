@@ -191,6 +191,7 @@ export const Glyphs = {
   Obsidian: Glyph(Chars.Obsidian, Colors.Grey2),
   Turns: Glyph(Chars.Time, Colors.Blue),
   Molten: Glyph(Chars.Diamond, Colors.Orange),
+  Chain: Glyph(Chars.ChainLinkHorizontal, Colors.Grey3),
 };
 
 export const DIRECTION_CHARS: {

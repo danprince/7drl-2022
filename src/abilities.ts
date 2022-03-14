@@ -18,6 +18,10 @@ export class Chain extends Ability {
     };
   }
 
+  addLinks(count: number) {
+    this.links += count;
+  }
+
   getDirectionalChar(direction: Direction.Direction) {
     switch (direction) {
       case Direction.NORTH:
