@@ -379,6 +379,7 @@ export class LevelDesigner {
       MonsterSpawnPotential,
       RareMonsterPotential,
       UncommonMonsterPotential,
+      RewardPotential,
     }
 
     debuggingRenderer = terminal => {
@@ -416,6 +417,9 @@ export class LevelDesigner {
             break;
           case Debug.UncommonMonsterPotential:
             debugPercent(terminal, point.x, point.y, potentials.uncommonMonster);
+            break;
+          case Debug.RewardPotential:
+            debugPercent(terminal, point.x, point.y, potentials.reward);
             break;
         }
       }
