@@ -3,7 +3,6 @@ import { Chars, Glyph } from "./common";
 import { Ability, Damage, DamageType, Substance, TargetingMode } from "./engine";
 import { directionToGridVector } from "./helpers";
 import { Colors } from "./common";
-import { Explosion } from "./effects";
 
 export class Chain extends Ability {
   name = "Chain";
