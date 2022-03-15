@@ -288,7 +288,9 @@ export class Worm extends Entity {
   hp = Stat(2);
   status: "idle" | "chasing" = "idle";
   target: Entity | undefined;
-  spitCooldown = 0;
+
+  private spitCooldown = 0;
+  private spitDistance = 3;
 
   canSpit() {
     return this.spitCooldown <= 0;
@@ -319,7 +321,7 @@ export class Worm extends Entity {
           return true;
         }
 
-        if (this.distanceTo(this.target) <= 5 && this.canSpit()) {
+        if (this.distanceTo(this.target) <= this.spitDistance && this.canSpit()) {
           this.level.addEffect(this.spit());
         } else {
           this.moveTowardsWithDiagonals(this.target);
