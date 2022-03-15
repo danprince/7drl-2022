@@ -13,7 +13,7 @@ export let Caverns = new LevelType({
     defaultDoorTile: Tiles.Doorway,
     commonMonsterTypes: [Entities.Mantleshell, Entities.Stoneshell, Entities.Spider],
     uncommonMonsterTypes: [Entities.Boulder, Entities.Maguana, Entities.Bat, Entities.Stonetusk],
-    rareMonsterTypes: [Entities.Worm],
+    rareMonsterTypes: [Entities.Worm, Entities.Magman],
     baseMonsterSpawnChance: 0.02,
     maxRewards: 2,
     decorations: [],

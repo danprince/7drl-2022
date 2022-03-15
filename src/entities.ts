@@ -1,11 +1,11 @@
 import { Direction, Line, Point, Raster, RNG, Vector } from "silmarils";
-import { InteractEvent, PushEvent } from "./events";
-import { Attack, Damage, DamageType, Effect, Entity, Speeds, Stat, StatusType, Substance, UpdateResult } from "./engine";
+import { InteractEvent, PushEvent, StatusAddedEvent } from "./events";
+import { Attack, Damage, DamageType, Effect, Entity, Speeds, Stat, Substance, UpdateResult } from "./engine";
 import { Glyph, Chars, Colors, getDirectionChar } from "./common";
+import { assert, getDirectionBetween } from "./helpers";
 import * as Statuses from "./statuses";
 import * as Effects from "./effects";
 import * as Substances from "./substances";
-import { assert, getDirectionBetween } from "./helpers";
 export * from "./traps";
 
 export class Chest extends Entity {
@@ -499,5 +499,60 @@ export class Stonetusk extends Entity {
       amount: 3,
       knockback: true,
     };
+  }
+}
+
+export class Magman extends Entity {
+  name = "Magman";
+  description = "";
+  glyph = Glyph(Chars.Man, Colors.Orange2);
+  speed = Speeds.EveryTurn;
+  hp = Stat(10);
+  erupting = false;
+
+  getStatusGlyph(): Glyph {
+    let glyph = super.getStatusGlyph(); 
+
+    if (this.erupting) {
+      return Glyph(Chars.ManArmsUp, glyph.fg, glyph.bg);
+    }
+
+    return glyph;
+  }
+
+  onStatusAdded(event: StatusAddedEvent): void {
+    if (event.status instanceof Statuses.Molten) {
+      this.erupt();
+    }
+  }
+
+  takeTurn(): UpdateResult {
+    if (this.erupting) {
+      this.erupt();
+      this.erupting = false;
+      return true;
+    }
+
+    if (Point.manhattan(this.pos, game.player.pos) === 1) {
+      this.erupting = true;
+      return true;
+    }
+
+    if (this.canSee(game.player)) {
+      return this.moveTowards(game.player)
+    } else {
+      return this.moveIn(RNG.element(Direction.CARDINAL_DIRECTIONS))
+    }
+  }
+
+  erupt() {
+    game.level.addEffect(Effects.Explosion({
+      pos: this.pos,
+      size: 1,
+      attacker: this,
+      canTarget: entity => entity !== this,
+      getGlyph: () => Glyph("*", Colors.Orange3),
+      getDamage: () => ({ type: DamageType.Explosion, amount: 4 }),
+    }));
   }
 }
