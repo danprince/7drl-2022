@@ -12,7 +12,7 @@ export class Chest extends Entity {
   name = "Chest";
   description = "";
   interactive = true;
-  glyph = Glyph(Chars.Chest, Colors.Orange2);
+  glyph = Glyph(Chars.Chest, Colors.Grey3);
   mimicChance = 0.05;
   loot = (entity: Entity) => {};
 
@@ -34,7 +34,7 @@ export class Chest extends Entity {
 export class Mimic extends Entity {
   name = "Mimic";
   description = "";
-  glyph = Glyph(Chars.Mimic, Colors.Orange);
+  glyph = Glyph(Chars.Mimic, Colors.Grey3);
   hp = Stat(10);
   speed = Speeds.Every2Turns;
   target: Entity | undefined;
