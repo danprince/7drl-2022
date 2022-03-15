@@ -8,7 +8,7 @@ export class Molten extends Status {
   name = "Molten";
   description = "Deal/take {10}2x{/} damage";
   glyph = Glyph(Chars.Diamond, Colors.Orange3);
-  turns = 3;
+  turns = 5;
 
   modifyGlyph(glyph: Glyph): Glyph {
     return { ...glyph, fg: Colors.Orange3 };
