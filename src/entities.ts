@@ -426,3 +426,78 @@ export class Spider extends Entity {
     };
   }
 }
+
+
+export class Stonetusk extends Entity {
+  name = "Stonetusk";
+  description = "";
+  glyph = Glyph(Chars.Boar, Colors.Grey3);
+  speed = Speeds.EveryTurn;
+  hp = Stat(4);
+  status: "hunting" | "rearing" | "charging" = "hunting";
+  chargeDirection: Direction.CardinalDirection | undefined;
+
+  getIntentGlyph(): Glyph | undefined {
+    if (this.status === "rearing" && this.chargeDirection) {
+      return Glyph(getDirectionChar(this.chargeDirection), Colors.Red);
+    } else {
+      return;
+    }
+  }
+
+  takeTurn(): UpdateResult {
+    let target = game.player;
+    let canSeeTarget = this.canSee(target);
+
+    if (this.status === "hunting") {
+      if (!canSeeTarget) {
+        return this.moveIn(RNG.element(Direction.CARDINAL_DIRECTIONS));
+      }
+
+      let vec = Vector.fromPoints(this.pos, target.pos)
+      let [dx, dy] = vec;
+
+      if (dx === 0 || dy === 0) {
+        this.chargeDirection = Direction.cardinalFromVector(vec);
+        this.status = "rearing";
+        return true;
+      }
+
+      if (dx < dy) {
+        return this.moveBy([Math.sign(dx), 0]);
+      } else {
+        return this.moveBy([0, Math.sign(dy)]);
+      }
+    }
+
+    if (this.status === "rearing") {
+      game.level.addEffect(this.charge());
+    }
+
+    return true;
+  }
+
+  *charge() {
+    assert(this.chargeDirection, "direction required to charge");
+    assert(this.status === "rearing", "trying to charge without rearing");
+    this.status = "charging";
+
+    while (true) {
+      yield 1;
+      this.moveIn(this.chargeDirection, { forced: true });
+      if (!this.didMove) break;
+      if (this.dead) break;
+    }
+
+    this.addStatus(new Statuses.Stunned(3));
+    this.status = "hunting";
+  }
+
+  getMeleeDamage(): Damage | null {
+    return {
+      type: DamageType.Melee,
+      amount: 3,
+      knockback: true,
+    };
+  }
+}
