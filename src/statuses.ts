@@ -1,5 +1,5 @@
 import { Glyph, Chars, Colors } from "./common";
-import { DealDamageEvent, TakeDamageEvent } from "./events";
+import { DealDamageEvent, TakeDamageEvent, TryMoveEvent } from "./events";
 import { DamageType, Status } from "./engine";
 import { assert } from "./helpers";
 import { Fire } from "./substances";
@@ -106,6 +106,24 @@ export class Poisoned extends Status {
         type: DamageType.Poison,
         amount: 1,
       });
+    }
+  }
+}
+
+export class Tangled extends Status {
+  name = "Tangled";
+  glyph = Glyph(Chars.Stun, Colors.White);
+  description = "Unable to move";
+  turns = 3;
+
+  modifyGlyph(glyph: Glyph): Glyph {
+    return { ...glyph, bg: Colors.Grey2, fg: Colors.White };
+  }
+
+  onTryMove(event: TryMoveEvent): void {
+    event.status = "blocked";
+    if (event.entity === game.player) {
+      game.log("You struggle to move");
     }
   }
 }

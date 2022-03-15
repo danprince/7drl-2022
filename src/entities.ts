@@ -1,6 +1,6 @@
 import { Direction, Line, Point, Raster, RNG, Vector } from "silmarils";
 import { InteractEvent, PushEvent } from "./events";
-import { Attack, Damage, DamageType, Effect, Entity, Speeds, Stat, Substance, UpdateResult } from "./engine";
+import { Attack, Damage, DamageType, Effect, Entity, Speeds, Stat, StatusType, Substance, UpdateResult } from "./engine";
 import { Glyph, Chars, Colors, getDirectionChar } from "./common";
 import * as Statuses from "./statuses";
 import * as Effects from "./effects";
@@ -394,6 +394,35 @@ export class Bat extends Entity {
     return {
       type: DamageType.Melee,
       amount: 2,
+    };
+  }
+}
+
+export class Spider extends Entity {
+  readonly spinWebChance = 0.5;
+
+  name = "Spider";
+  description = "";
+  glyph = Glyph(Chars.Spider, Colors.Orange2);
+  speed = Speeds.Every2Turns;
+  hp = Stat(4);
+  immunities = [Statuses.Tangled];
+
+  takeTurn(): UpdateResult {
+    if (RNG.chance(this.spinWebChance)) {
+      this.getTile().setSubstance(new Substances.SpiderWeb());
+      return true;
+    } else if (this.canSee(game.player)) {
+      return this.moveTowards(game.player);
+    } else {
+      return this.moveIn(RNG.element(Direction.CARDINAL_DIRECTIONS));
+    }
+  }
+
+  getMeleeDamage(): Damage {
+    return {
+      type: DamageType.Melee,
+      amount: 1,
     };
   }
 }

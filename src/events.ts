@@ -30,6 +30,7 @@ export class EventHandler {
   onKill(event: KillEvent) {}
   onPush(event: PushEvent) {}
   onMove(event: MoveEvent) {}
+  onTryMove(event: TryMoveEvent) {}
   onInteract(event: InteractEvent) {}
   onStatusAdded(event: StatusAddedEvent) {}
   onStatusRemoved(event: StatusRemovedEvent) {}
@@ -65,6 +66,38 @@ export class ExitLevelEvent extends GameEvent {
 
   dispatch() {
     this.sendTo(game.player);
+    this.sendTo(game);
+  }
+}
+
+export class TryMoveEvent extends GameEvent {
+  // "success" -> we are able to try moving
+  // "failed" -> can't move but can try something else
+  // "blocked" -> can't move and can't retry
+  status: "success" | "failed" | "blocked" = "success";
+
+  block() {
+    this.status = "blocked";
+  }
+
+  fail() {
+    this.status = "failed";
+  }
+
+  constructor(
+    readonly entity: Entity,
+    readonly startPoint: Point.Point,
+    readonly endPoint: Point.Point
+  ) {
+    super();
+  }
+
+  invoke(handler: EventHandler) {
+    return handler.onTryMove(this);
+  }
+
+  dispatch() {
+    this.sendTo(this.entity);
     this.sendTo(game);
   }
 }

@@ -1,6 +1,6 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
 import { Glyph, Chars } from "./common";
-import { DealDamageEvent, DeathEvent, DespawnEvent, EnterLevelEvent, EventHandler, ExitLevelEvent, GainCurrencyEvent, GameEvent, InteractEvent, KillEvent, MoveEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, TileExitEvent, VestigeAddedEvent } from "./events";
+import { DealDamageEvent, DeathEvent, DespawnEvent, EnterLevelEvent, EventHandler, ExitLevelEvent, GainCurrencyEvent, GameEvent, InteractEvent, KillEvent, MoveEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, TileExitEvent, TryMoveEvent, VestigeAddedEvent } from "./events";
 import { Constructor, DijkstraMap, directionToGridVector, OneOrMore } from "./helpers";
 import { Terminal } from "./terminal";
 import { Colors } from "./common";
@@ -374,7 +374,7 @@ export class Tile extends EventHandler {
   setSubstance(substance: Substance) {
     this.substance = substance;
     substance.tile = this;
-    substance.init();
+    substance.create();
   }
 
   removeSubstance() {
@@ -560,7 +560,7 @@ export abstract class Entity extends EventHandler {
   abstract description: string;
 
   getTile() {
-    return this.level.getTile(this.pos.x, this.pos.y);
+    return this.level.getTile(this.pos.x, this.pos.y)!;
   }
 
   getIntentGlyph(): Glyph | undefined {
@@ -770,15 +770,29 @@ export abstract class Entity extends EventHandler {
   }
 
   moveTo(x: number, y: number, options = defaultMovementOptions) {
+    this.didMove = false;
+
     // Moves to a tile we're already on are pointless
     if (x === this.pos.x && y === this.pos.y) return false;
 
     let tile = this.level.getTile(x, y);
+    let startPos = Point.clone(this.pos);
+    let endPos = Point.from(x, y);
+
+    // Check to see whether anything might be preventing us from moving
+    let tryMoveEvent = new TryMoveEvent(this, startPos, endPos);
+
+    tryMoveEvent.dispatch();
+
+    switch (tryMoveEvent.status) {
+      case "blocked":
+        return true;
+      case "failed":
+        return false;
+    }
 
     // Check whether this entity can move onto this tile.
     if (tile == null || !this.canMoveOntoTile(tile, options)) {
-      this.didMove = false;
-
       if (tile) {
         // If there is a tile there but they can't move onto it, fire off
         // a "bump" event just in case there's something else they can do
@@ -815,7 +829,6 @@ export abstract class Entity extends EventHandler {
         this.attack(entity, damage);
       }
 
-      this.didMove = false;
       return true;
     }
 
@@ -978,19 +991,18 @@ export abstract class Substance extends EventHandler {
 
   constructor(timer?: number) {
     super();
-
-    if (timer) {
-      this.timer = timer;
-    }
-  }
-
-  init() {
-    if (this.timer === 0) {
-      this.timer = this.defaultTimer;
-    }
+    this.timer = timer ?? 0;
   }
 
   abstract applyTo(entity: Entity): void;
+
+  create() {
+    if (this.timer === 0) {
+      this.timer = this.defaultTimer;
+    }
+
+    this.onCreate();
+  }
 
   enter(entity: Entity) {
     this.applyTo(entity);
@@ -1013,6 +1025,7 @@ export abstract class Substance extends EventHandler {
   }
 
   protected onEnter(entity: Entity) {}
+  protected onCreate() {}
   protected onUpdate() {}
   protected onRemove() {}
 }

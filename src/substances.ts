@@ -1,5 +1,5 @@
 import { RNG } from "silmarils";
-import { Entity, Substance, Tile } from "./engine";
+import { Entity, Stat, Status, Substance, Tile } from "./engine";
 import { Colors } from "./common";
 import * as Statuses from "./statuses";
 import * as Tiles from "./tiles";
@@ -59,5 +59,18 @@ export class Fire extends Substance {
   onRemove() {
     let tile = new Tile(Tiles.ScorchedEarth);
     game.level.setTile(this.tile.pos.x, this.tile.pos.y, tile);
+  }
+}
+
+export class SpiderWeb extends Substance {
+  fg = Colors.White;
+  bg = Colors.Grey2;
+  char = "\x1e";
+  defaultTimer = 30;
+
+  applyTo(entity: Entity): void {
+    if (!entity.flying) {
+      entity.addStatus(new Statuses.Tangled());
+    }
   }
 }
