@@ -698,7 +698,7 @@ export abstract class Entity extends EventHandler {
     return true;
   }
 
-  onUpdate() {}
+  protected onUpdate() {}
 
   async update() {
     let result: UpdateResult = true;
