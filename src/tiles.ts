@@ -137,8 +137,10 @@ export let Lava = new TileType({
     bg: [Colors.Orange2],
   },
   onTileEnter({ entity, tile }) {
-    game.log(entity, "burns in", tile);
-    entity.die();
+    if (!entity.flying) {
+      game.log(entity, "burns in", tile);
+      entity.die();
+    }
   },
 });
 
@@ -151,8 +153,10 @@ export let Water = new TileType({
     bg: [Colors.Turquoise2],
   },
   onTileEnter({ entity, tile }) {
-    game.log(entity, "drowns in", tile, "the");
-    entity.die();
+    if (!entity.flying) {
+      game.log(entity, "drowns in", tile, "the");
+      entity.die();
+    }
   },
 });
 

@@ -373,3 +373,27 @@ export class Worm extends Entity {
     };
   }
 }
+
+export class Bat extends Entity {
+  name = "Bat";
+  description = "";
+  glyph = Glyph(Chars.Bat, Colors.Pink);
+  speed = Speeds.EveryTurn;
+  flying = true;
+  hp = Stat(2);
+
+  takeTurn(): UpdateResult {
+    if (this.canSee(game.player)) {
+      return this.moveTowardsWithDiagonals(game.player);
+    } else {
+      return this.moveIn(RNG.element(Direction.DIRECTIONS));
+    }
+  }
+
+  getMeleeDamage(): Damage {
+    return {
+      type: DamageType.Melee,
+      amount: 2,
+    };
+  }
+}

@@ -128,6 +128,7 @@ export const Chars = {
   Slime: "\x92",
   Skeleton: "\x93",
   Chicken: "\x94",
+  Bat: "\x95",
   Mimic: "\xa9",
 
   // Props

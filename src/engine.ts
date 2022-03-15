@@ -548,6 +548,7 @@ export abstract class Entity extends EventHandler {
   intentGlyph: Glyph | undefined;
   immunities: StatusType[] = [];
   statuses: Status[] = [];
+  flying = false;
   dead = false;
   heavy = false;
   visionDistance = 10;
@@ -757,30 +758,36 @@ export abstract class Entity extends EventHandler {
     return this.moveBy([Math.sign(dx), Math.sign(dy)], options);
   }
 
+  canMoveOntoTile(tile: Tile, options: MovementOptions) {
+    return (
+      // Flying entities can always move onto flyable tiles
+      (tile.type.flyable && this.flying) ||
+      // Walking entities will only move into liquid if forced
+      (tile.type.liquid && options.forced) ||
+      // Otherwise, just check whether the tile is walkable
+      (tile.type.walkable)
+    );
+  }
+
   moveTo(x: number, y: number, options = defaultMovementOptions) {
     // Moves to a tile we're already on are pointless
     if (x === this.pos.x && y === this.pos.y) return false;
 
-    // Check whether there is a walkable tile
     let tile = this.level.getTile(x, y);
 
-    // Can't walk into void tiles
-    if (tile == null) {
+    // Check whether this entity can move onto this tile.
+    if (tile == null || !this.canMoveOntoTile(tile, options)) {
       this.didMove = false;
-      return false;
-    }
 
-    // Don't walk into liquid unless we're being forced
-    if (tile.type.liquid && !options.forced) {
-      this.didMove = false;
-      return false;
-    }
-
-    // Can't walk into solid tiles
-    if (!tile.type.walkable && !tile.type.liquid) {
-      let event = new TileBumpEvent(this, tile).dispatch();
-      this.didMove = false;
-      return event.succeeded;
+      if (tile) {
+        // If there is a tile there but they can't move onto it, fire off
+        // a "bump" event just in case there's something else they can do
+        // (e.g. digging it, or interacting with it).
+        let event = new TileBumpEvent(this, tile).dispatch();
+        return event.succeeded;
+      } else {
+        return false;
+      }
     }
 
     // Attempt to melee any entities stood here
