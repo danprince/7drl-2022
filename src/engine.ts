@@ -698,10 +698,13 @@ export abstract class Entity extends EventHandler {
     return true;
   }
 
+  onUpdate() {}
+
   async update() {
     let result: UpdateResult = true;
     this.skipNextTurn = false;
 
+    this.onUpdate();
     this.gainEnergy();
     this.updateStatuses();
 

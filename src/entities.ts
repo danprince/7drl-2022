@@ -288,6 +288,15 @@ export class Worm extends Entity {
   hp = Stat(2);
   status: "idle" | "chasing" = "idle";
   target: Entity | undefined;
+  spitCooldown = 0;
+
+  canSpit() {
+    return this.spitCooldown <= 0;
+  }
+
+  onUpdate(): void {
+    this.spitCooldown -= 1;
+  }
 
   takeTurn(): UpdateResult {
     // TODO: Implement boring/burrowing
@@ -310,7 +319,7 @@ export class Worm extends Entity {
           return true;
         }
 
-        if (this.distanceTo(this.target) <= 5) {
+        if (this.distanceTo(this.target) <= 5 && this.canSpit()) {
           this.level.addEffect(this.spit());
         } else {
           this.moveTowardsWithDiagonals(this.target);
@@ -323,6 +332,7 @@ export class Worm extends Entity {
 
   *spit(): Effect {
     assert(this.target, "target required");
+    this.spitCooldown = 5;
 
     let line = Line.fromPoints(this.pos, this.target.pos);
     let path = Raster.strokeLine(line);
