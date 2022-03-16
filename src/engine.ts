@@ -1,7 +1,7 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
 import { Glyph, Chars } from "./common";
 import { DealDamageEvent, DeathEvent, DespawnEvent, EnterLevelEvent, EventHandler, ExitLevelEvent, GainCurrencyEvent, GameEvent, InteractEvent, KillEvent, MoveEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, TileExitEvent, TryMoveEvent, VestigeAddedEvent } from "./events";
-import { Constructor, DijkstraMap, directionToGridVector, OneOrMore } from "./helpers";
+import { clamp, Constructor, DijkstraMap, directionToGridVector, OneOrMore } from "./helpers";
 import { Terminal } from "./terminal";
 import { Colors } from "./common";
 import { Digger } from "./digger";
@@ -641,7 +641,7 @@ export abstract class Entity extends EventHandler {
       this.moveBy(damage.vector, { forced: true });
     }
 
-    this.hp.current = Math.max(this.hp.current - damage.amount, 0);
+    this.hp.current = clamp(0, this.hp.current - damage.amount, this.hp.max);
 
     if (this.hp.current <= 0) {
       this.die(damage, dealer);
