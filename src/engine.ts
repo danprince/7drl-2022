@@ -976,7 +976,7 @@ export class Player extends Entity {
   getMeleeDamage(): Damage {
     return {
       type: DamageType.Melee,
-      amount: 1,
+      amount: 2,
     };
   }
 }
