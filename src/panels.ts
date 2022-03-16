@@ -3,7 +3,7 @@ import { Glyph, Chars, Colors } from "./common";
 import { debuggingRenderer as designerDebuggingRenderer } from "./designer";
 import { Ability, DamageType, Entity, Status, Tile } from "./engine";
 import { glyphToString } from "./helpers";
-import { Panel, debugBigDigit, singleLineLength, Terminal } from "./terminal";
+import { Panel, debugBigDigit, singleLineLength, Terminal, fmt } from "./terminal";
 
 export class ViewportPanel extends Panel {
   dijkstraMapsEnabled = false;
@@ -330,6 +330,15 @@ export class TopBarPanel extends Panel {
     let x1 = terminal.width - 1;
     terminal.put(x1, 0, ability.glyph.char, fg, bg);
 
+    let description = fmt()
+      .text(ability.description)
+      .text("\n\n")
+      .text("Press ")
+      .color(Colors.Grey4)
+      .text("\xbe\xbf")
+      .reset()
+      .toString();
+
     if (terminal.isPointerOver(x1, 0)) {
       terminal.drawPopup({
         x: x1,
@@ -337,7 +346,7 @@ export class TopBarPanel extends Panel {
         align: "start",
         justify: "end",
         title: ability.name,
-        text: ability.description,
+        text: description,
       });
     }
   }

@@ -7,7 +7,7 @@ import { Colors } from "./common";
 export class Chain extends Ability {
   name = "Chain";
   glyph = Glyph(Chars.ChainLinkHorizontal, Colors.Grey3);
-  description = "";
+  description = "Lash out in one direction.";
   links: number = 3;
 
   get targetingMode(): TargetingMode {
