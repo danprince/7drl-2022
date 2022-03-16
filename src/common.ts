@@ -118,7 +118,7 @@ export const Chars = {
   Boar: "\x88",
   Knight: "\x89",
   Krokodil: "\x8a",
-  Cultist: "\x8b",
+  KrokodilCrawling: "\x8b",
   Demon: "\x8c",
   Man: "\x8c",
   ManArmsUp: "\x8d",

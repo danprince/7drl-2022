@@ -565,6 +565,8 @@ export abstract class Entity extends EventHandler {
     return glyph;
   }
 
+  renderTargets(terminal: Terminal) {}
+
   onEvent(event: GameEvent): void {
     for (let status of this.statuses) {
       event.sendTo(status);

@@ -2,10 +2,11 @@ import { Direction, Line, Point, Raster, RNG, Vector } from "silmarils";
 import { InteractEvent, PushEvent, StatusAddedEvent } from "./events";
 import { Attack, Damage, DamageType, Effect, Entity, Speeds, Stat, Substance, UpdateResult } from "./engine";
 import { Glyph, Chars, Colors, getDirectionChar } from "./common";
-import { assert, getDirectionBetween } from "./helpers";
+import { assert, directionToGridVector, getDirectionBetween } from "./helpers";
 import * as Statuses from "./statuses";
 import * as Effects from "./effects";
 import * as Substances from "./substances";
+import { Terminal } from "./terminal";
 export * from "./traps";
 
 export class Chest extends Entity {
@@ -576,5 +577,115 @@ export class Magman extends Entity {
 
     this.eruptionSize = 0;
     this.eruptionTimer = 0;
+  }
+}
+
+export class Magmadile extends Entity {
+  name = "Magmadile";
+  description = "";
+  glyph = Glyph(Chars.Krokodil, Colors.Orange3);
+  speed = Speeds.EveryTurn;
+  hp = Stat(6);
+  visionDistance = 3;
+  biteDirection: Direction.Direction | undefined;
+
+  biteRange = 3;
+  crawling = true;
+
+  getStatusGlyph(): Glyph {
+    let glyph = { ...super.getStatusGlyph() }; 
+
+    if (this.crawling) {
+      glyph.char = Chars.KrokodilCrawling;
+    }
+
+    return glyph;
+  }
+
+  renderTargets(term: Terminal) {
+    if (this.biteDirection == null) return;
+    let points = this.getBitePoints();
+
+    for (let point of points) {
+      term.put(point.x, point.y, "x", Colors.Red);
+    }
+  }
+
+  getBitePoints(): Point.Point[] {
+    if (this.biteDirection == null) return [];
+    let points: Point.Point[] = [];
+    let vec = directionToGridVector(this.biteDirection);
+    let pos = Point.clone(this.pos);
+
+    for (let i = 0; i < this.biteRange; i++) {
+      pos = Point.translated(pos, vec);
+      points.push(pos);
+    }
+
+    return points;
+  }
+
+  takeTurn(): UpdateResult {
+    let canSeePlayer = this.canSee(game.player);
+    let canBitePlayer = this.distanceTo(game.player) < 2;
+
+    if (this.biteDirection) {
+      this.bite();
+      return true;
+    }
+
+    if (this.crawling) {
+      if (canBitePlayer) {
+        this.stand();
+        this.prepareToBite();
+      } else if (canSeePlayer) {
+        this.moveTowards(game.player);
+      } else {
+        this.moveIn(RNG.element(Direction.CARDINAL_DIRECTIONS));
+      }
+    } else {
+      if (canBitePlayer) {
+        this.prepareToBite();
+      } else {
+        this.crawl();
+      }
+    }
+
+    return true;
+  }
+
+  stand() {
+    this.crawling = false;
+    this.speed = Speeds.Every3Turns;
+  }
+
+  crawl() {
+    this.crawling = true;
+    this.speed = Speeds.EveryTurn;
+  }
+
+  prepareToBite() {
+    this.energy = 12; // Guarantee that we act next turn
+    this.biteDirection = getDirectionBetween(this.pos, game.player.pos);
+  }
+
+  bite() {
+    console.log("BITE")
+    for (let point of this.getBitePoints()) {
+      let entities = game.level.getEntitiesAt(point.x, point.y);
+      for (let entity of entities) {
+        let dmg = this.getBiteDamage();
+        this.attack(entity, dmg);
+      }
+    }
+
+    this.biteDirection = undefined;
+  }
+
+  getBiteDamage(): Damage {
+    return {
+      type: DamageType.Generic,
+      amount: 3,
+    };
   }
 }

@@ -65,6 +65,10 @@ export class ViewportPanel extends Panel {
       }
     }
 
+    for (let entity of game.level.entities) {
+      entity.renderTargets(terminal);
+    }
+
     for (let fx of game.level.fx) {
       fx(terminal);
     }
