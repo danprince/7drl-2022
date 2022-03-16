@@ -520,7 +520,7 @@ export class Magman extends Entity {
       glyph.char = Chars.ManArmsUp;
     }
 
-    if (this.eruptionTimer > 1) {
+    if (this.eruptionSize > 1) {
       glyph.fg = Colors.Orange3;
     }
 
@@ -534,7 +534,7 @@ export class Magman extends Entity {
   }
 
   takeTurn(): UpdateResult {
-    if (this.eruptionTimer > 0) {
+    if (this.eruptionTimer >= 0) {
       this.eruptionTimer -= 1;
     }
 
@@ -573,5 +573,8 @@ export class Magman extends Entity {
       getGlyph: () => Glyph("*", Colors.Orange3),
       getDamage: () => ({ type: DamageType.Explosion, amount: 4 }),
     }));
+
+    this.eruptionSize = 0;
+    this.eruptionTimer = 0;
   }
 }
