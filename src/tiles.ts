@@ -94,6 +94,7 @@ export let Upstairs = new TileType({
 });
 
 export let Downstairs = new TileType({
+  flyable: true,
   glyph: Glyph(Chars.Downstairs, Colors.Grey3),
 });
 
