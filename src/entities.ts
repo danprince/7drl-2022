@@ -510,13 +510,18 @@ export class Magman extends Entity {
   glyph = Glyph(Chars.Man, Colors.Orange2);
   speed = Speeds.EveryTurn;
   hp = Stat(10);
-  erupting = false;
+  eruptionTimer = -1;
+  eruptionSize = 0;
 
   getStatusGlyph(): Glyph {
-    let glyph = super.getStatusGlyph(); 
+    let glyph = { ...super.getStatusGlyph() }; 
 
-    if (this.erupting) {
-      return Glyph(Chars.ManArmsUp, glyph.fg, glyph.bg);
+    if (this.eruptionTimer > 0) {
+      glyph.char = Chars.ManArmsUp;
+    }
+
+    if (this.eruptionTimer > 1) {
+      glyph.fg = Colors.Orange3;
     }
 
     return glyph;
@@ -529,14 +534,26 @@ export class Magman extends Entity {
   }
 
   takeTurn(): UpdateResult {
-    if (this.erupting) {
-      this.erupt();
-      this.erupting = false;
+    if (this.eruptionTimer > 0) {
+      this.eruptionTimer -= 1;
+    }
+
+    // If there's still time left on the timer it means we're doing the
+    // big eruption and we shouldn't move this turn.
+    if (this.eruptionTimer >= 1) {
       return true;
     }
 
+    // If the timer hit zero, it's time to erupt.
+    if (this.eruptionTimer === 0) {
+      this.erupt();
+      return true;
+    }
+
+    // If we're in eruption range of the player then we'll either do a small
+    // (timer 1, radius 1) or large (timer 2, radius 2) eruption.
     if (Point.manhattan(this.pos, game.player.pos) === 1) {
-      this.erupting = true;
+      this.eruptionTimer = this.eruptionSize = RNG.int(1, 3);
       return true;
     }
 
@@ -550,7 +567,7 @@ export class Magman extends Entity {
   erupt() {
     game.level.addEffect(Effects.Explosion({
       pos: this.pos,
-      size: 1,
+      size: this.eruptionSize,
       attacker: this,
       canTarget: entity => entity !== this,
       getGlyph: () => Glyph("*", Colors.Orange3),
