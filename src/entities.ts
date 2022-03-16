@@ -49,7 +49,7 @@ export class Mimic extends Entity {
 
   getMeleeDamage(): Damage {
     return {
-      type: DamageType.Melee,
+      type: DamageType.Generic,
       amount: 3,
     };
   }
@@ -59,7 +59,7 @@ export class Maguana extends Entity {
   name = "Maguana";
   description = "";
   glyph = Glyph(Chars.Lizard, Colors.Orange3);
-  hp = Stat(2);
+  hp = Stat(4);
   speed = 24;
   triggeringEntity: Entity | undefined;
 
@@ -148,7 +148,7 @@ export class Boulder extends Entity {
 
   getMeleeDamage(): Damage | null {
     return {
-      type: DamageType.Stone,
+      type: DamageType.Trap,
       vector: Direction.toVector(this.rollDirection!),
       knockback: true,
       amount: 10,
@@ -202,7 +202,7 @@ export class Frog extends Entity {
 
   getMeleeDamage(): Damage | null {
     return {
-      type: DamageType.Melee,
+      type: DamageType.Generic,
       amount: 1,
     };
   }
@@ -394,7 +394,7 @@ export class Bat extends Entity {
 
   getMeleeDamage(): Damage {
     return {
-      type: DamageType.Melee,
+      type: DamageType.Generic,
       amount: 2,
     };
   }
@@ -423,7 +423,7 @@ export class Spider extends Entity {
 
   getMeleeDamage(): Damage {
     return {
-      type: DamageType.Melee,
+      type: DamageType.Generic,
       amount: 1,
     };
   }
@@ -497,7 +497,7 @@ export class Stonetusk extends Entity {
 
   getMeleeDamage(): Damage | null {
     return {
-      type: DamageType.Melee,
+      type: DamageType.Generic,
       amount: 3,
       knockback: true,
     };

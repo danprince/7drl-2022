@@ -450,7 +450,7 @@ export class DamageType {
     ""
   );
 
-  static Melee = new DamageType(
+  static Fist = new DamageType(
     Glyph(Chars.Fist, Colors.Grey3),
     "Melee",
     ""
@@ -465,18 +465,6 @@ export class DamageType {
   static Explosion = new DamageType(
     Glyph(Chars.Fire, Colors.Orange4),
     "Explosion",
-    ""
-  );
-
-  static Stone = new DamageType(
-    Glyph(Chars.Block1, Colors.Grey3),
-    "Stone",
-    ""
-  );
-
-  static Projectile = new DamageType(
-    Glyph(Chars.Missile, Colors.Grey3),
-    "Missile",
     ""
   );
 }
@@ -975,7 +963,7 @@ export class Player extends Entity {
 
   getMeleeDamage(): Damage {
     return {
-      type: DamageType.Melee,
+      type: DamageType.Fist,
       amount: 2,
     };
   }
