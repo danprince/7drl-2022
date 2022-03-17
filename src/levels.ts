@@ -50,23 +50,3 @@ export let Jungle = new LevelType({
     decorations: [],
   },
 });
-
-export let Hallway = new LevelType({
-  name: "Hallway",
-  template: {
-    map: ``,
-    legend: {},
-  },
-  characteristics: {
-    defaultFloorTile: Tiles.JungleFloor,
-    defaultWallTile: Tiles.JungleWall,
-    defaultLiquidTile: Tiles.Lava,
-    defaultDoorTile: Tiles.Doorway,
-    commonMonsterTypes: [Entities.Frog],
-    uncommonMonsterTypes: [Entities.Slimeshell],
-    rareMonsterTypes: [Entities.Worm],
-    baseMonsterSpawnChance: 0.02,
-    maxRewards: 3,
-    decorations: [],
-  },
-});
