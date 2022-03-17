@@ -80,6 +80,8 @@ export class Level extends EventHandler {
   effects: Effect[] = [];
   entrancePoint: Point.Point = { x: -1, y: -1 };
   exitPoint: Point.Point = { x: -1, y: -1 };
+  entitySpawnQueue: Entity[] = [];
+  private levelIsActive = false;
 
   constructor(type: LevelType, width: number, height: number) {
     super();
@@ -89,6 +91,8 @@ export class Level extends EventHandler {
   }
 
   enter() {
+    this.levelIsActive = true;
+    this.spawnQueuedEntities();
     new EnterLevelEvent(this).dispatch();
   }
 
@@ -133,6 +137,11 @@ export class Level extends EventHandler {
   }
 
   addEntity(entity: Entity) {
+    if (!this.levelIsActive) {
+      this.entitySpawnQueue.push(entity);
+      return;
+    }
+
     if (entity instanceof Player) {
       this.entities.unshift(entity);
     } else {
@@ -245,6 +254,13 @@ export class Level extends EventHandler {
         entity.dead
       );
     })
+  }
+
+  private spawnQueuedEntities() {
+    for (let entity of this.entitySpawnQueue) {
+      this.addEntity(entity);
+    }
+    this.entitySpawnQueue = [];
   }
 }
 
