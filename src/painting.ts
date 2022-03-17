@@ -11,8 +11,8 @@ export class PaintingView extends View {
   cc: number = 10;
   fg: number = Colors.White;
   bg: number = Colors.Black;
-  width: number = 5;
-  height: number = 5;
+  width: number = 10;
+  height: number = 10;
   buffer: (Glyph | undefined)[] = [];
 
   static load() {
@@ -187,8 +187,8 @@ export class PaintingView extends View {
     root.frame();
 
     let canvas = root.child(
-      20,
-      10,
+      15,
+      1,
       this.width,
       this.height
     );
