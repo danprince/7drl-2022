@@ -199,7 +199,7 @@ export class Precipice extends Vestige {
   description = fmt().glyph(Glyphs.Melee).text(" deal 2x dmg when on 1").glyph(Glyphs.HP).toString();
 
   onDealDamage(event: Events.DealDamageEvent): void {
-    if (this.owner.hp.current === 1 && event.damage.type === DamageType.Melee) {
+    if (this.owner.hp.current === 1 && event.damage.type === DamageType.Fist) {
       event.damage.amount *= 2;
     }
   }
@@ -212,7 +212,7 @@ export class Rupture extends Vestige {
   description = fmt().glyph(Glyphs.Melee).text(" deal 2x dmg when on 1").glyph(Glyphs.HP).toString();
 
   onDealDamage(event: Events.DealDamageEvent): void {
-    if (this.owner.hp.current === 1 && event.damage.type === DamageType.Melee) {
+    if (this.owner.hp.current === 1 && event.damage.type === DamageType.Generic) {
       event.damage.amount *= 2;
     }
   }
@@ -265,7 +265,7 @@ export class Bloodknuckles extends Vestige {
   description = fmt("Gain").glyph(Glyphs.HP).text(" on kill with ").glyph(Glyphs.Melee).toString();
 
   onKill(event: Events.KillEvent): void {
-    if (event.damage && event.damage.type === DamageType.Melee) {
+    if (event.damage && event.damage.type === DamageType.Generic) {
       this.owner.applyDamage({ type: DamageType.Healing, amount: -1 });
     }
   }
@@ -289,7 +289,7 @@ export class Ignition extends Vestige {
   description = fmt("Become").glyph(Glyphs.Molten).text(" after kill with ").glyph(Glyphs.Melee).toString();
 
   onKill(event: Events.KillEvent): void {
-    if (event.damage && event.damage.type === DamageType.Melee) {
+    if (event.damage && event.damage.type === DamageType.Generic) {
       this.owner.addStatus(new Statuses.Molten());
     }
   }
