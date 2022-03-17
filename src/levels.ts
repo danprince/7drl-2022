@@ -11,9 +11,23 @@ export let Caverns = new LevelType({
     defaultWallTile: Tiles.BoneWall,
     defaultLiquidTile: Tiles.Lava,
     defaultDoorTile: Tiles.Doorway,
-    commonMonsterTypes: [Entities.Mantleshell, Entities.Stoneshell, Entities.Spider],
-    uncommonMonsterTypes: [Entities.Boulder, Entities.Maguana, Entities.Bat, Entities.Stonetusk],
-    rareMonsterTypes: [Entities.Worm, Entities.Magman, Entities.Magmadile],
+    commonMonsterTypes: [
+      Entities.Mantleshell,
+      Entities.Stoneshell,
+      Entities.Spider,
+    ],
+    uncommonMonsterTypes: [
+      Entities.Boulder,
+      Entities.Maguana,
+      Entities.Bat,
+      Entities.Stonetusk,
+    ],
+    rareMonsterTypes: [
+      Entities.Worm,
+      Entities.Magman,
+      Entities.Magmadile,
+      Entities.GoldenMonkey,
+    ],
     baseMonsterSpawnChance: 0.02,
     maxRewards: 2,
     decorations: [],
@@ -23,6 +37,26 @@ export let Caverns = new LevelType({
 export let Jungle = new LevelType({
   name: "Jungle",
   dig: Terrains.alien,
+  characteristics: {
+    defaultFloorTile: Tiles.JungleFloor,
+    defaultWallTile: Tiles.JungleWall,
+    defaultLiquidTile: Tiles.Lava,
+    defaultDoorTile: Tiles.Doorway,
+    commonMonsterTypes: [Entities.Frog],
+    uncommonMonsterTypes: [Entities.Slimeshell],
+    rareMonsterTypes: [Entities.Worm],
+    baseMonsterSpawnChance: 0.02,
+    maxRewards: 3,
+    decorations: [],
+  },
+});
+
+export let Hallway = new LevelType({
+  name: "Hallway",
+  template: {
+    map: ``,
+    legend: {},
+  },
   characteristics: {
     defaultFloorTile: Tiles.JungleFloor,
     defaultWallTile: Tiles.JungleWall,

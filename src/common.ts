@@ -130,6 +130,7 @@ export const Chars = {
   Skeleton: "\x93",
   Chicken: "\x94",
   Bat: "\x95",
+  Monkey: "\xa4",
   Spider: "\xa5",
   Mimic: "\xa9",
 

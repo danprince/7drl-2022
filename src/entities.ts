@@ -1,5 +1,5 @@
 import { Direction, Line, Point, Raster, RNG, Vector } from "silmarils";
-import { InteractEvent, PushEvent, StatusAddedEvent } from "./events";
+import { DeathEvent, InteractEvent, PushEvent, SpawnEvent, StatusAddedEvent, TileBumpEvent } from "./events";
 import { Attack, Damage, DamageType, Effect, Entity, Speeds, Stat, Substance, UpdateResult } from "./engine";
 import { Glyph, Chars, Colors, getDirectionChar } from "./common";
 import { assert, directionToGridVector, getDirectionBetween } from "./helpers";
@@ -670,7 +670,6 @@ export class Magmadile extends Entity {
   }
 
   bite() {
-    console.log("BITE")
     for (let point of this.getBitePoints()) {
       let entities = game.level.getEntitiesAt(point.x, point.y);
       for (let entity of entities) {
@@ -687,5 +686,44 @@ export class Magmadile extends Entity {
       type: DamageType.Generic,
       amount: 3,
     };
+  }
+}
+
+export class GoldenMonkey extends Entity {
+  name = "GoldenMonkey";
+  description = "";
+  glyph = Glyph(Chars.Monkey, Colors.Orange);
+  speed = Speeds.Every2Turns;
+  hp = Stat(3);
+  path: Point.Point[] = [];
+
+  onSpawn(event: SpawnEvent): void {
+    // TODO: Get from level metrics
+    let map = game.level.getDijkstraMap(game.level.exitPoint);
+    this.path = map.shortestPath(this.pos);
+    this.path.pop(); // pop own position off of path
+    this.path.reverse(); // reverse path to finish at exit
+  }
+
+  takeTurn(): UpdateResult {
+    if (this.path.length === 0) {
+      this.despawn();
+      return true;
+    }
+
+    let nextPos = this.path[0];
+    this.moveTo(nextPos.x, nextPos.y);
+
+    if (this.didMove) {
+      this.path.shift();
+    }
+
+    return true;
+  }
+
+  onDeath(event: DeathEvent): void {
+    if (event.killer === game.player) {
+      game.player.addCurrency(RNG.int(10, 50));
+    }
   }
 }
