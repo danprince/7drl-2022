@@ -104,7 +104,7 @@ export class ArrowTrap extends DirectionalTriggerTrap<Direction.CardinalDirectio
 
   hit(entity: Entity) {
     entity.applyDamage({
-      type: DamageType.Projectile,
+      type: DamageType.Trap,
       amount: 3,
     });
   }
