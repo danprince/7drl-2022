@@ -1,5 +1,5 @@
 import { Direction, Line, Point, Raster, RNG, Vector } from "silmarils";
-import { DeathEvent, InteractEvent, PushEvent, SpawnEvent, StatusAddedEvent, TileBumpEvent } from "./events";
+import { DeathEvent, InteractEvent, PushEvent, SpawnEvent, StatusAddedEvent } from "./events";
 import { Attack, Damage, DamageType, Effect, Entity, Speeds, Stat, Substance, UpdateResult } from "./engine";
 import { Glyph, Chars, Colors, getDirectionChar } from "./common";
 import { assert, directionToGridVector, getDirectionBetween } from "./helpers";
@@ -91,6 +91,7 @@ export class Maguana extends Entity {
       pos: this.pos,
       size: 3,
       attacker: this.triggeringEntity || this,
+      canTarget: entity => entity !== this,
       getGlyph: () => RNG.item(
         Glyph(Chars.Fire, Colors.Orange3, Colors.Black),
         Glyph(Chars.Fire, Colors.Orange3, Colors.Black),
