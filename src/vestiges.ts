@@ -10,7 +10,7 @@ import * as Events from "./events";
 export class Prolong extends Vestige {
   name = "Prolong";
   glyph = Glyph(Chars.Time, Colors.Blue);
-  rarity = Rarity.Rare;
+  rarity = Rarity.Common;
   description =
     fmt("Statuses last ")
       .color(Colors.Blue).text("2x").reset()
@@ -41,7 +41,7 @@ export class Bores extends Vestige {
 
 export class Tectonic extends Vestige {
   name = "Tectonic";
-  rarity = Rarity.Rare;
+  rarity = Rarity.Uncommon;
   glyph = Glyph(Chars.NorthEast, Colors.Blue);
   description = fmt()
     .glyph(Glyphs.Melee)
@@ -212,7 +212,7 @@ export class Rupture extends Vestige {
   description = fmt().glyph(Glyphs.Melee).text(" deal 2x dmg when on 1").glyph(Glyphs.HP).toString();
 
   onDealDamage(event: Events.DealDamageEvent): void {
-    if (this.owner.hp.current === 1 && event.damage.type === DamageType.Generic) {
+    if (this.owner.hp.current === 1 && event.damage.type === DamageType.Fist) {
       event.damage.amount *= 2;
     }
   }
@@ -265,7 +265,7 @@ export class Bloodknuckles extends Vestige {
   description = fmt("Gain").glyph(Glyphs.HP).text(" on kill with ").glyph(Glyphs.Melee).toString();
 
   onKill(event: Events.KillEvent): void {
-    if (event.damage && event.damage.type === DamageType.Generic) {
+    if (event.damage && event.damage.type === DamageType.Fist) {
       this.owner.applyDamage({ type: DamageType.Healing, amount: -1 });
     }
   }
@@ -289,7 +289,7 @@ export class Ignition extends Vestige {
   description = fmt("Become").glyph(Glyphs.Molten).text(" after kill with ").glyph(Glyphs.Melee).toString();
 
   onKill(event: Events.KillEvent): void {
-    if (event.damage && event.damage.type === DamageType.Generic) {
+    if (event.damage && event.damage.type === DamageType.Fist) {
       this.owner.addStatus(new Statuses.Molten());
     }
   }
