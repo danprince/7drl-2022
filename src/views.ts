@@ -8,14 +8,15 @@ import { RewardsView } from "./rewards";
 import { Terminal } from "./terminal";
 import { View } from "./ui";
 import { PaintingView } from "./painting";
+import { DEFAULT_LEVEL_HEIGHT, DEFAULT_LEVEL_WIDTH } from "./config";
 
 export class GameView extends View {
   fps = 60;
 
-  viewport = new ViewportPanel(3, 2, 21, 21);
-  messages = new MessagesPanel(this.viewport, 3, 24, 21, 10);
-  topBar = new TopBarPanel(3, 0, 21, 1);
-  sideBar = new SidebarPanel(1, 2, 1, 21);
+  viewport = new ViewportPanel(3, 2, DEFAULT_LEVEL_WIDTH, DEFAULT_LEVEL_HEIGHT);
+  messages = new MessagesPanel(this.viewport, 3, this.viewport.height + 3, this.viewport.width, 10);
+  topBar = new TopBarPanel(3, 0, this.viewport.width, 1);
+  sideBar = new SidebarPanel(1, 2, 1, this.viewport.height);
 
   constructor() {
     super();

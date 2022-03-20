@@ -1,5 +1,6 @@
 import { Keyboard, Point, Rectangle } from "silmarils";
 import { Chars, Colors, Glyph } from "./common";
+import { UI_SCALE } from "./config";
 
 export enum TextAlign {
   Left,
@@ -254,6 +255,14 @@ export class Terminal {
 export abstract class Panel {
   bounds: Rectangle.Rectangle;
 
+  get width() {
+    return this.bounds.width;
+  }
+
+  get height() {
+    return this.bounds.height;
+  }
+
   constructor(x: number, y: number, width: number, height: number) {
     this.bounds = { x, y, width, height };
   }
@@ -283,7 +292,7 @@ export class Renderer {
   private fontTintCache: HTMLCanvasElement[] = [];
   width: number = 0;
   height: number = 0;
-  scale: number = 4;
+  scale: number = UI_SCALE;
 
   constructor(font: Font, palette: string[]) {
     this.canvas = document.createElement("canvas");

@@ -1,4 +1,5 @@
 import { Array2D, Direction, Point, PRNG } from "silmarils";
+import { DEFAULT_LEVEL_HEIGHT, DEFAULT_LEVEL_WIDTH, RARE_CHANCE, UNCOMMON_CHANCE } from "./config";
 import { Digger, Marker } from "./digger";
 import { Level, LevelType, Entity, Tile, Decoration } from "./engine";
 import { assert, DijkstraMap, directionToGridVector, maxBy } from "./helpers";
@@ -8,13 +9,9 @@ import * as Entities from "./entities";
 
 export let debuggingRenderer = (terminal: Terminal) => {};
 
-const DEFAULT_LEVEL_WIDTH = 21;
-const DEFAULT_LEVEL_HEIGHT = 21;
 const DESIGNERS_PER_LEVEL = 10;
 const MAX_DIG_ATTEMPTS = 10;
 const MAX_DECORATE_ATTEMPTS = 50;
-const UNCOMMON_CHANCE = 0.15;
-const RARE_CHANCE = 0.05;
 
 export function designLevel(levelType: LevelType, entrance: Point.Point): Level {
   console.time("design");

@@ -2,6 +2,7 @@ import { Point } from "silmarils";
 import { Font, Inputs, Renderer, Terminal } from "./terminal";
 import { Game } from "./game";
 import { EventHandler, GameEvent } from "./events";
+import { DEFAULT_LEVEL_HEIGHT, DEFAULT_LEVEL_WIDTH } from "./config";
 
 type PopupOptions = Parameters<Terminal["drawPopup"]>[0];
 
@@ -26,7 +27,7 @@ export class UI extends EventHandler {
     this.inputs = new Inputs();
     this.renderer = new Renderer(font, palette);
     this.terminal = new Terminal(this.renderer, this.inputs);
-    this.resize(27, 32);
+    this.resize(DEFAULT_LEVEL_WIDTH + 4, DEFAULT_LEVEL_HEIGHT + 10);
     document.body.append(this.renderer.canvas);
     window.addEventListener("keydown", this.dispatch);
     window.addEventListener("pointermove", this.dispatch);
