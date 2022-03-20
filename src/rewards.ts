@@ -110,7 +110,7 @@ function rollVestigeReward(rarity: Rarity): VestigeReward | undefined {
   let uncommonVestiges =
     game.vestigePool.filter(vestige => vestige.rarity === Rarity.Uncommon);
   let commonVestiges =
-    game.vestigePool.filter(vestige => vestige.rarity === Rarity.Uncommon);
+    game.vestigePool.filter(vestige => vestige.rarity === Rarity.Common);
 
   // Translate rare rolls into uncommon if the rare pool is empty.
   if (rarity === Rarity.Rare && rareVestiges.length === 0) rarity = Rarity.Uncommon;
