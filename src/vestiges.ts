@@ -1,11 +1,12 @@
 import { Direction, Point, RNG } from "silmarils";
-import { DamageType, Rarity, Tile, Vestige } from "./engine";
+import { DamageType, Tile } from "./engine";
 import { Glyph, Colors, Chars, Glyphs } from "./common";
 import { fmt } from "./terminal";
 import * as Substances from "./substances";
 import * as Statuses from "./statuses";
 import * as Effects from "./effects";
 import * as Events from "./events";
+import { Rarity, Vestige } from "./game";
 
 export class Prolong extends Vestige {
   name = "Prolong";

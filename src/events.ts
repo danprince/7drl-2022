@@ -1,5 +1,6 @@
 import { Direction, Point } from "silmarils";
-import { Damage, Entity, Level, Status, Tile, Vestige } from "./engine";
+import { Damage, Entity, Level, Status, Tile } from "./engine";
+import { Vestige } from "./game";
 import { Constructor, getDirectionBetween } from "./helpers";
 
 export abstract class GameEvent {

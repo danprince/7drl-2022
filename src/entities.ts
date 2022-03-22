@@ -1,7 +1,7 @@
 import { Direction, Line, Point, Raster, RNG, Vector } from "silmarils";
 import { DeathEvent, InteractEvent, PushEvent, SpawnEvent, StatusAddedEvent } from "./events";
-import { Attack, Damage, DamageType, Effect, Entity, Speeds, Stat, Substance, UpdateResult } from "./engine";
-import { Glyph, Chars, Colors, getDirectionChar } from "./common";
+import { Attack, Damage, DamageType, Effect, Entity, Stat, Substance, UpdateResult } from "./engine";
+import { Glyph, Chars, Colors, getDirectionChar, Speeds } from "./common";
 import { assert, directionToGridVector, getDirectionBetween } from "./helpers";
 import * as Statuses from "./statuses";
 import * as Effects from "./effects";

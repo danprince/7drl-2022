@@ -1,5 +1,7 @@
 import { Direction } from "silmarils";
 
+export const ENERGY_REQUIRED_PER_TURN = 12;
+
 export interface Glyph {
   char: string;
   fg: number;
@@ -214,3 +216,26 @@ export const DIRECTION_CHARS: {
 export function getDirectionChar(direction: Direction.Direction): string {
   return DIRECTION_CHARS[direction];
 }
+
+export const Speeds = {
+  Never: 0,
+  EveryTurn: ENERGY_REQUIRED_PER_TURN,
+  Every2Turns: ENERGY_REQUIRED_PER_TURN / 2,
+  Every3Turns: ENERGY_REQUIRED_PER_TURN / 3,
+  Every4Turns: ENERGY_REQUIRED_PER_TURN / 4,
+  Every6Turns: ENERGY_REQUIRED_PER_TURN / 6,
+};
+
+export const StatusGlyphs = {
+  Stunned: Glyph(Chars.Stun, Colors.Grey3),
+  Alerted: Glyph("!", Colors.Red),
+  Attacking: Glyph(Chars.Sword, Colors.Red),
+  North: Glyph(Chars.North, Colors.Red),
+  South: Glyph(Chars.South, Colors.Red),
+  West: Glyph(Chars.West, Colors.Red),
+  East: Glyph(Chars.East, Colors.Red),
+  NorthEast: Glyph(Chars.NorthEast, Colors.Red),
+  NorthWest: Glyph(Chars.NorthWest, Colors.Red),
+  SouthEast: Glyph(Chars.SouthWest, Colors.Red),
+  SouthWest: Glyph(Chars.SouthWest, Colors.Red),
+};

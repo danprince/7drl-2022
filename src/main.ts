@@ -1,6 +1,5 @@
 import { RNG } from "silmarils";
-import { Player, Vestige } from "./engine";
-import { Game } from "./game";
+import { Game, Player, Vestige } from "./game";
 import { UI } from "./ui";
 import { createFont } from "./terminal";
 import { GameView } from "./views";

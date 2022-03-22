@@ -1,12 +1,13 @@
 import { RNG } from "silmarils";
 import { Colors, Chars, Glyph, Glyphs } from "./common";
 import { designLevel } from "./designer";
-import { DamageType, Rarity, Vestige } from "./engine";
+import { DamageType } from "./engine";
 import { Terminal, TextAlign, fmt } from "./terminal";
 import { View } from "./ui";
 import * as Levels from "./levels";
 import { Chain } from "./abilities";
 import { assert } from "./helpers";
+import { Vestige, Rarity } from "./game";
 
 interface Reward {
   price: number;

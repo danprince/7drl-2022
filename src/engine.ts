@@ -1,21 +1,15 @@
 import { Direction, Line, Point, Raster, Rectangle, RNG, Vector } from "silmarils";
-import { Glyph, Chars } from "./common";
-import { DealDamageEvent, DeathEvent, DespawnEvent, EnterLevelEvent, EventHandler, ExitLevelEvent, GainCurrencyEvent, GameEvent, InteractEvent, KillEvent, MoveEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, TileExitEvent, TryMoveEvent, VestigeAddedEvent } from "./events";
+import { Glyph, Chars, ENERGY_REQUIRED_PER_TURN } from "./common";
+import { DealDamageEvent, DeathEvent, DespawnEvent, EnterLevelEvent, EventHandler, ExitLevelEvent, GameEvent, InteractEvent, KillEvent, MoveEvent, PushEvent, SpawnEvent, StatusAddedEvent, StatusRemovedEvent, TakeDamageEvent, TileBumpEvent, TileEnterEvent, TileExitEvent, TryMoveEvent } from "./events";
 import { clamp, Constructor, DijkstraMap, directionToGridVector, OneOrMore } from "./helpers";
 import { Terminal } from "./terminal";
 import { Colors } from "./common";
 import { Digger } from "./digger";
 
-const ENERGY_REQUIRED_PER_TURN = 12;
+const PARALLEL_EFFECTS = true;
 
 export type GameMessageComponent = string | number | Glyph | Entity | DamageType | Status | Tile;
 export type GameMessage = GameMessageComponent[];
-
-export enum Rarity {
-  Common,
-  Uncommon,
-  Rare,
-}
 
 interface MovementOptions {
   forced: boolean;
@@ -142,12 +136,7 @@ export class Level extends EventHandler {
       return;
     }
 
-    if (entity instanceof Player) {
-      this.entities.unshift(entity);
-    } else {
-      this.entities.push(entity);
-    }
-
+    this.entities.push(entity);
     entity.level = this;
     new SpawnEvent(entity).dispatch();
   }
@@ -215,6 +204,107 @@ export class Level extends EventHandler {
         }
 
         tile.glyph.char = tile.type.autotiling[offset];
+      }
+    }
+  }
+
+  async* update() {
+    this.updateTiles();
+    yield* this.updateEntities();
+  }
+
+  updateTiles() {
+    for (let tile of this.tiles) {
+      tile?.update();
+      // TODO: Update effects?
+    }
+  }
+
+  async* updateEntities() {
+    // Only update the entities that existed at the start of this turn
+    let entities = [...this.entities];
+
+    for (let entity of entities) {
+      if (entity.dead) continue;
+
+      if (entity === game.player) {
+        yield 0;
+      }
+
+      while (true) {
+        let result = await entity.update();
+
+        if (entity === game.player && result === false) {
+          yield 0;
+        } else {
+          break
+        }
+      }
+
+      yield* this.updateEffects();
+    }
+  }
+
+  *updateEffects() {
+    if (PARALLEL_EFFECTS) {
+      yield* this.updateEffectsParallel();
+    } else {
+      yield* this.updateEffectsSequential();
+    }
+  }
+
+  private *updateEffectsSequential() {
+    while (this.effects.length) {
+      let effects = this.effects;
+      this.effects = [];
+
+      for (let effect of effects) {
+        for (let frame of effect) {
+          yield frame;
+        }
+      }
+    }
+  }
+
+  private *updateEffectsParallel() {
+    let timers = new WeakMap<Effect, number>();
+
+    while (this.effects.length) {
+      let effects = this.effects;
+      this.effects = [];
+      let timeStep = Infinity;
+
+      for (let effect of effects) {
+        // The effect won't have a timer if it was just added to the queue,
+        // in which case we just use 0 as the default to ensure it will get
+        // updated during the upcoming frame.
+        let timer = timers.get(effect) ?? 0;
+
+        timer -= 1;
+
+        if (timer <= 0) {
+          // If the timer hits zero, then the current step of this effect
+          // has finished, so we should start processing the next step.
+          let result = effect.next();
+          // At this point we can check whether the effect is done and bail
+          // out if it is (this makes sure it isn't added back onto the queue).
+          if (result.done) continue;
+          // Prevent effects from using fractional/negative/infinite timers.
+          timer = Math.floor(clamp(0, result.value, 100));
+        }
+
+        // Find the minimum
+        if (timer < timeStep) {
+          timeStep = timer;
+        }
+
+        timers.set(effect, timer);
+        this.effects.push(effect);
+      }
+
+      // If the timestep is still infinite, than means that 
+      if (isFinite(timeStep)) {
+        yield timeStep;
       }
     }
   }
@@ -401,29 +491,6 @@ export class Tile extends EventHandler {
 export type UpdateResult =
   | boolean // sync action
   | Promise<boolean> // async action
-
-export const Speeds = {
-  Never: 0,
-  EveryTurn: ENERGY_REQUIRED_PER_TURN,
-  Every2Turns: ENERGY_REQUIRED_PER_TURN / 2,
-  Every3Turns: ENERGY_REQUIRED_PER_TURN / 3,
-  Every4Turns: ENERGY_REQUIRED_PER_TURN / 4,
-  Every6Turns: ENERGY_REQUIRED_PER_TURN / 6,
-};
-
-export const StatusGlyphs = {
-  Stunned: Glyph(Chars.Stun, Colors.Grey3),
-  Alerted: Glyph("!", Colors.Red),
-  Attacking: Glyph(Chars.Sword, Colors.Red),
-  North: Glyph(Chars.North, Colors.Red),
-  South: Glyph(Chars.South, Colors.Red),
-  West: Glyph(Chars.West, Colors.Red),
-  East: Glyph(Chars.East, Colors.Red),
-  NorthEast: Glyph(Chars.NorthEast, Colors.Red),
-  NorthWest: Glyph(Chars.NorthWest, Colors.Red),
-  SouthEast: Glyph(Chars.SouthWest, Colors.Red),
-  SouthWest: Glyph(Chars.SouthWest, Colors.Red),
-};
 
 export class DamageType {
   name: string;
@@ -863,7 +930,7 @@ export abstract class Entity extends EventHandler {
   }
 
   canInteract() {
-    return this instanceof Player;
+    return false;
   }
 
   canSee(entity: Entity) {
@@ -886,106 +953,6 @@ export abstract class Entity extends EventHandler {
   }
 }
 
-export type PlayerAction =
-  | { type: "rest" }
-  | { type: "move", x: number, y: number }
-  | { type: "use", target: Direction.Direction | Entity | undefined }
-
-export class Player extends Entity {
-  name = "You";
-  description = "";
-  glyph = Glyph(Chars.Creature, Colors.White);
-  speed = Speeds.EveryTurn;
-  hp = Stat(10);
-  molten = false;
-  ability: Ability | undefined;
-  vestiges: Vestige[] = [];
-  hasKey: boolean = false;
-  currency = 0;
-
-  onEvent(event: GameEvent): void {
-    super.onEvent(event);
-
-    for (let vestige of this.vestiges) {
-      event.sendTo(vestige);
-    }
-
-    if (this.ability) {
-      event.sendTo(this.ability);
-    }
-  }
-
-  addCurrency(amount: number) {
-    let event = new GainCurrencyEvent(amount);
-    event.dispatch();
-    this.currency += event.amount;
-  }
-
-  setAbility(ability: Ability) {
-    this.ability = ability;
-    this.ability.owner = this;
-  }
-
-  addVestige(vestige: Vestige) {
-    this.vestiges.push(vestige);
-    vestige.owner = this;
-    vestige.onAdded();
-    new VestigeAddedEvent(this, vestige).dispatch();
-  }
-
-  updateVestiges() {
-    for (let vestige of this.vestiges) {
-      vestige.onUpdate();
-    }
-  }
-
-  update() {
-    this.updateVestiges();
-    return super.update();
-  }
-
-  setNextAction(action: PlayerAction): void {}
-
-  private waitForNextAction() {
-    return new Promise<PlayerAction>(resolve => {
-      this.setNextAction = resolve;
-    });
-  }
-
-  async takeTurn() {
-    let action = await this.waitForNextAction();
-
-    switch (action.type) {
-      case "move":
-        return this.moveBy([action.x, action.y]);
-      case "rest":
-        return true;
-      case "use":
-        return this.useAbility(action.target);
-      default:
-        return false;
-    }
-  }
-
-  useAbility(target: Direction.Direction | Entity | undefined): boolean {
-    if (this.ability == null) {
-      return false;
-    }
-
-    if (this.ability.canUse() === false) {
-      return false;
-    }
-
-    return this.ability.use(target);
-  }
-
-  getMeleeDamage(): Damage {
-    return {
-      type: DamageType.Fist,
-      amount: 2,
-    };
-  }
-}
 
 export abstract class Substance extends EventHandler {
   abstract fg: number;
@@ -1034,33 +1001,4 @@ export abstract class Substance extends EventHandler {
   protected onCreate() {}
   protected onUpdate() {}
   protected onRemove() {}
-}
-
-export abstract class Ability extends EventHandler {
-  owner: Player = undefined!;
-  abstract name: string;
-  abstract description: string;
-  abstract glyph: Glyph;
-  abstract targetingMode: TargetingMode;
-
-  onUpdate(entity: Entity) {}
-  canUse(): boolean { return true; }
-  use(target?: Entity | Direction.Direction): boolean { return true; }
-}
-
-export type TargetingMode =
-  | { type: "directional", range: number }
-  | { type: "entity" }
-  | { type: "none" }
-
-export abstract class Vestige extends EventHandler {
-  owner: Player = undefined!;
-  abstract name: string;
-  abstract description: string;
-  abstract glyph: Glyph;
-  abstract rarity: Rarity;
-
-  onAdded() {}
-  onRemoved() {}
-  onUpdate() {}
 }

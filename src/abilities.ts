@@ -1,8 +1,9 @@
 import { Direction, Point, Vector } from "silmarils";
 import { Chars, Glyph } from "./common";
-import { Ability, Damage, DamageType, Substance, TargetingMode } from "./engine";
+import { Damage, DamageType, Substance } from "./engine";
 import { directionToGridVector } from "./helpers";
 import { Colors } from "./common";
+import { Ability, TargetingMode } from "./game";
 
 export class Chain extends Ability {
   name = "Chain";

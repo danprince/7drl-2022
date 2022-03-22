@@ -1,7 +1,7 @@
 import { Direction, Point, Vector } from "silmarils";
 import { Chars, Colors, getDirectionChar } from "./common";
 import { ExitLevelEvent, GameEvent } from "./events";
-import { PlayerAction } from "./engine";
+import { PlayerAction } from "./game";
 import { delayAnimationFrame, directionToGridVector } from "./helpers";
 import { MessagesPanel, SidebarPanel, TopBarPanel, ViewportPanel } from "./panels";
 import { RewardsView } from "./rewards";

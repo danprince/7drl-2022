@@ -1,10 +1,14 @@
-import { Point } from "silmarils";
-import { Level, Player, GameMessage, Vestige, Effect } from "./engine";
-import { EventHandler, GameEvent } from "./events";
+import { Direction, Point } from "silmarils";
+import { Glyph, Chars, Colors, Speeds } from "./common";
+import { Level, GameMessage, Damage, DamageType, Entity, Stat } from "./engine";
+import { EventHandler, GainCurrencyEvent, GameEvent, VestigeAddedEvent } from "./events";
 import { MessageLogHandler } from "./handlers";
-import { clamp } from "./helpers";
 
-const PARALLEL_EFFECTS = true;
+export enum Rarity {
+  Common,
+  Uncommon,
+  Rare,
+}
 
 export class Game extends EventHandler {
   level: Level = null!;
@@ -53,102 +57,140 @@ export class Game extends EventHandler {
   }
 
   async* update(): AsyncGenerator<number, void> {
-    this.updateTiles();
-    yield* this.updateEntities();
+    yield* this.level.update();
     // If the player is no longer acting then we need to put frames
     // in between turns to stay responsive.
-    yield this.player.dead ? 1 : 0;
+    yield this.player.dead ? 10 : 0;
     this.turns += 1;
   }
+}
 
-  updateTiles() {
-    for (let tile of this.level.tiles) {
-      tile?.update();
+export type PlayerAction =
+  | { type: "rest" }
+  | { type: "move", x: number, y: number }
+  | { type: "use", target: Direction.Direction | Entity | undefined }
+
+export class Player extends Entity {
+  name = "You";
+  description = "";
+  glyph = Glyph(Chars.Creature, Colors.White);
+  speed = Speeds.EveryTurn;
+  hp = Stat(10);
+  molten = false;
+  ability: Ability | undefined;
+  vestiges: Vestige[] = [];
+  hasKey: boolean = false;
+  currency = 0;
+
+  onEvent(event: GameEvent): void {
+    super.onEvent(event);
+
+    for (let vestige of this.vestiges) {
+      event.sendTo(vestige);
+    }
+
+    if (this.ability) {
+      event.sendTo(this.ability);
     }
   }
 
-  async* updateEntities() {
-    // Only update the entities that existed at the start of this turn
-    let entities = [...this.level.entities];
+  addCurrency(amount: number) {
+    let event = new GainCurrencyEvent(amount);
+    event.dispatch();
+    this.currency += event.amount;
+  }
 
-    for (let entity of entities) {
-      if (entity.dead) continue;
+  setAbility(ability: Ability) {
+    this.ability = ability;
+    this.ability.owner = this;
+  }
 
-      if (entity === game.player) {
-        yield 0;
-      }
+  addVestige(vestige: Vestige) {
+    this.vestiges.push(vestige);
+    vestige.owner = this;
+    vestige.onAdded();
+    new VestigeAddedEvent(this, vestige).dispatch();
+  }
 
-      while (true) {
-        let result = await entity.update();
-
-        if (entity === game.player && result === false) {
-          yield 0;
-        } else {
-          break
-        }
-      }
-
-      yield* this.updateEffects();
+  updateVestiges() {
+    for (let vestige of this.vestiges) {
+      vestige.onUpdate();
     }
   }
 
-  *updateEffects() {
-    if (PARALLEL_EFFECTS) {
-      yield* this.updateEffectsParallel();
-    } else {
-      while (this.level.effects.length) {
-        let effects = this.level.effects;
-        this.level.effects = [];
+  update() {
+    this.updateVestiges();
+    return super.update();
+  }
 
-        for (let effect of effects) {
-          for (let frame of effect) {
-            yield frame;
-          }
-        }
-      }
+  setNextAction(action: PlayerAction): void {}
+
+  private waitForNextAction() {
+    return new Promise<PlayerAction>(resolve => {
+      this.setNextAction = resolve;
+    });
+  }
+
+  async takeTurn() {
+    let action = await this.waitForNextAction();
+
+    switch (action.type) {
+      case "move":
+        return this.moveBy([action.x, action.y]);
+      case "rest":
+        return true;
+      case "use":
+        return this.useAbility(action.target);
+      default:
+        return false;
     }
   }
 
-  *updateEffectsParallel() {
-    let timers = new WeakMap<Effect, number>();
-
-    while (this.level.effects.length) {
-      let effects = this.level.effects;
-      this.level.effects = [];
-      let timeStep = Infinity;
-
-      for (let effect of effects) {
-        // The effect won't have a timer if it was just added to the queue,
-        // in which case we just use 0 as the default to ensure it will get
-        // updated during the upcoming frame.
-        let timer = timers.get(effect) ?? 0;
-
-        timer -= 1;
-
-        if (timer <= 0) {
-          // If the timer hits zero, then the current step of this effect
-          // has finished, so we should start processing the next step.
-          let result = effect.next();
-          // At this point we can check whether the effect is done and bail
-          // out if it is (this makes sure it isn't added back onto the queue).
-          if (result.done) continue;
-          // Prevent effects from using fractional/negative/infinite timers.
-          timer = Math.floor(clamp(0, result.value, 100));
-        }
-
-        // Find the minimum
-        if (timer < timeStep) {
-          timeStep = timer;
-        }
-
-        timers.set(effect, timer);
-        this.level.effects.push(effect);
-      }
-
-      // If the timestep is still infinite, than means that 
-      if (isFinite(timeStep)) {
-        yield timeStep;
-      }
+  useAbility(target: Direction.Direction | Entity | undefined): boolean {
+    if (this.ability == null) {
+      return false;
     }
+
+    if (this.ability.canUse() === false) {
+      return false;
+    }
+
+    return this.ability.use(target);
   }
+
+  getMeleeDamage(): Damage {
+    return {
+      type: DamageType.Fist,
+      amount: 2,
+    };
+  }
+}
+
+export abstract class Ability extends EventHandler {
+  owner: Player = undefined!;
+  abstract name: string;
+  abstract description: string;
+  abstract glyph: Glyph;
+  abstract targetingMode: TargetingMode;
+
+  onUpdate(entity: Entity) {}
+  canUse(): boolean { return true; }
+  use(target?: Entity | Direction.Direction): boolean { return true; }
+}
+
+export type TargetingMode =
+  | { type: "directional", range: number }
+  | { type: "entity" }
+  | { type: "none" }
+
+export abstract class Vestige extends EventHandler {
+  owner: Player = undefined!;
+  abstract name: string;
+  abstract description: string;
+  abstract glyph: Glyph;
+  abstract rarity: Rarity;
+
+  onAdded() {}
+  onRemoved() {}
+  onUpdate() {}
 }
