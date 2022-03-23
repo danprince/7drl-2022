@@ -227,15 +227,15 @@ export class Level extends EventHandler {
     for (let entity of entities) {
       if (entity.dead) continue;
 
-      if (entity === game.player) {
+      if (entity.canRetryTurn()) {
         yield 0;
       }
 
       while (true) {
         let result = await entity.update();
 
-        if (entity === game.player && result === false) {
-          yield 0;
+        if (entity.canRetryTurn() && result === false) {
+          yield 1;
         } else {
           break
         }
@@ -334,16 +334,6 @@ export class Level extends EventHandler {
       }
     }
     return points;
-  }
-
-  // TODO: This doesn't belong in the engine.
-  hasKilledAllMonsters() {
-    return this.entities.every(entity => {
-      return (
-        entity === game.player ||
-        entity.dead
-      );
-    })
   }
 
   private spawnQueuedEntities() {
@@ -464,7 +454,7 @@ export class Tile extends EventHandler {
   neighbours(): Tile[] {
     return Point
       .mooreNeighbours(this.pos)
-      .map(xy => game.level.getTile(xy.x, xy.y))
+      .map(xy => this.level.getTile(xy.x, xy.y))
       .filter(tile => tile != null) as Tile[];
   }
 
@@ -930,6 +920,10 @@ export abstract class Entity extends EventHandler {
   }
 
   canInteract() {
+    return false;
+  }
+
+  canRetryTurn() {
     return false;
   }
 

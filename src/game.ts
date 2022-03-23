@@ -94,6 +94,14 @@ export class Player extends Entity {
     }
   }
 
+  canInteract(): boolean {
+    return true;
+  }
+
+  canRetryTurn(): boolean {
+    return true;
+  }
+
   addCurrency(amount: number) {
     let event = new GainCurrencyEvent(amount);
     event.dispatch();

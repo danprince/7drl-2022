@@ -200,9 +200,19 @@ export class RewardsView extends View {
     }
 
     // Final reward if you killed everything in the previous level
-    if (game.level.hasKilledAllMonsters()) {
+    if (this.hasKilledAllMonsters()) {
       this.rewards.push(rollNextReward());
     }
+  }
+
+  hasKilledAllMonsters() {
+    return game.level.entities.every(entity => {
+      // TODO: Don't count environmental entities/traps
+      return (
+        entity === game.player ||
+        entity.dead
+      );
+    })
   }
 
   render(root: Terminal): void {
